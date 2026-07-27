@@ -1,0 +1,149 @@
+{% extends "base1.html" %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+  <h1 class="display-6 fw-semibold mb-0">Управление пользователями</h1>
+  <a href="/admin/usermgt/new" class="btn btn-primary btn-sm">+ Добавить пользователя</a>
+</div>
+
+<div class="table-responsive">
+  <table class="table align-middle">
+    <thead>
+      <tr>
+        <th>Email</th>
+        <th>Полное имя</th>
+        <th class="text-center">Активен</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for u in users %}
+      <tr>
+        <td>
+          <button type="button" class="btn btn-link p-0 user-email-link" data-user-id="{{ u.id }}" data-email="{{ u.email }}">
+            {{ u.email }}
+          </button>
+        </td>
+        <td>{{ u.fullname }}</td>
+        <td class="text-center">
+          <form method="post" action="/admin/usermgt/{{ u.id }}/toggle-active" class="m-0 d-inline-block">
+            <div class="form-check form-switch d-inline-block m-0">
+              <input
+                type="checkbox"
+                class="form-check-input"
+                role="switch"
+                onchange="this.form.submit()"
+                {% if u.isactive %}checked{% endif %}
+                aria-label="{{ 'Активен' if u.isactive else 'Отключён' }}"
+              >
+            </div>
+          </form>
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+<!-- Содержимое карточек каждого пользователя — по одной на пользователя, инертные
+     <template>, JS клонирует нужную в модалку ниже по клику на email. Так весь
+     контент (формы редактирования/ролей/пароля) уже отрисован Jinja с обычным
+     автоэкранированием, а не собирается на клиенте из строк. -->
+{% for u in users %}
+<template id="user-card-{{ u.id }}">
+  <div class="alert alert-danger d-none user-card-error" role="alert"></div>
+
+  {% set reopened_with_edit_error = open_user_id == u.id|string and open_user_email is not none %}
+  <h6 class="text-secondary text-uppercase small mb-2">Данные</h6>
+  <!-- Кнопка "Сохранить" физически расположена ниже, перед блоком "Безопасность"
+       (просьба пользователя), но остаётся частью ЭТОЙ формы через form="edit-form-{{u.id}}" —
+       вложить её сюда же нельзя, между ними лежат формы блока "Роли", а вложенные
+       <form> в HTML не поддерживаются. -->
+  <form id="edit-form-{{ u.id }}" method="post" action="/admin/usermgt/{{ u.id }}/edit" class="row g-3 mb-4">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+    <div class="col-12 col-md-6">
+      <label class="form-label">Email</label>
+      <input type="email" class="form-control" name="email" value="{{ open_user_email if reopened_with_edit_error else u.email }}" required>
+    </div>
+    <div class="col-12 col-md-6">
+      <label class="form-label">Имя</label>
+      <input type="text" class="form-control" name="name" value="{{ open_user_name if reopened_with_edit_error else u.name }}" required>
+    </div>
+    <div class="col-12">
+      <label class="form-label">Полное имя</label>
+      <input type="text" class="form-control" name="fullname" value="{{ open_user_fullname if reopened_with_edit_error else u.fullname }}" required>
+    </div>
+  </form>
+
+  <h6 class="text-secondary text-uppercase small mb-2">Роли</h6>
+  <div class="d-flex flex-wrap gap-1 mb-2">
+    {% for role in user_roles.get(u.id, []) %}
+    <span class="badge text-bg-primary d-flex align-items-center gap-2">
+      {{ role.name }}
+      <form method="post" action="/admin/usermgt/{{ u.id }}/remove-role" class="d-inline m-0">
+        <input type="hidden" name="role_id" value="{{ role.id }}">
+        <button type="submit" class="btn-close btn-close-white" style="font-size: 0.55rem;" aria-label="Убрать роль {{ role.name }}"></button>
+      </form>
+    </span>
+    {% else %}
+    <span class="text-secondary small">нет ролей</span>
+    {% endfor %}
+  </div>
+
+  {% set avail = available_roles.get(u.id, []) %}
+  {% if avail %}
+  <form method="post" action="/admin/usermgt/{{ u.id }}/assign-role" class="d-flex gap-1 mb-2">
+    <select name="role_id" class="form-select form-select-sm" style="width: auto;">
+      {% for role in avail %}
+      <option value="{{ role.id }}">{{ role.name }}</option>
+      {% endfor %}
+    </select>
+    <button type="submit" class="btn btn-sm btn-outline-primary">Назначить</button>
+  </form>
+  {% endif %}
+
+  <form method="post" action="/admin/usermgt/{{ u.id }}/new-role" class="d-flex gap-1 mb-4">
+    <input type="text" name="role_name" class="form-control form-control-sm" placeholder="Новая роль" style="width: auto;">
+    <button type="submit" class="btn btn-sm btn-outline-success">Создать и назначить</button>
+  </form>
+
+  <button type="submit" form="edit-form-{{ u.id }}" class="btn btn-primary btn-sm mb-4">Сохранить</button>
+
+  <h6 class="text-secondary text-uppercase small mb-2">Безопасность</h6>
+  <button type="button" class="btn btn-sm btn-outline-secondary user-toggle-password-btn">Сменить пароль</button>
+  <form method="post" action="/admin/usermgt/{{ u.id }}/change-password" class="row g-3 mt-1 d-none user-password-section">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+    <div class="col-12 col-md-6">
+      <label class="form-label">Новый пароль</label>
+      <input type="password" class="form-control" name="new_password" minlength="8" required>
+    </div>
+    <div class="col-12 col-md-6">
+      <label class="form-label">Подтверждение</label>
+      <input type="password" class="form-control" name="confirm_password" minlength="8" required>
+    </div>
+    <div class="col-12">
+      <button type="submit" class="btn btn-primary btn-sm">Сохранить пароль</button>
+    </div>
+  </form>
+</template>
+{% endfor %}
+
+<div class="modal fade" id="userCardModal" tabindex="-1" aria-labelledby="userCardModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="userCardModalLabel">Пользователь</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Закрыть"></button>
+      </div>
+      <div class="modal-body" id="userCardModalBody"></div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+  window.OPEN_USER_ID = {{ open_user_id|tojson }};
+  window.OPEN_USER_ERROR = {{ user_error|tojson }};
+</script>
+<script src="/js/usermgt.js"></script>
+{% endblock %}

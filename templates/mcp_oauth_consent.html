@@ -1,0 +1,23 @@
+{% extends "base1.html" %}
+
+{% block topbar %}{% endblock %}
+
+{% block content %}
+<span class="badge text-bg-secondary mb-3">MCP</span>
+<h1 class="display-6 fw-semibold mb-3">Разрешить доступ</h1>
+
+<p>
+  Приложение <strong>{{ client_name }}</strong> запрашивает доступ к InfoSys от имени
+  вашей учётной записи <strong>{{ user_email }}</strong>.
+</p>
+<p class="text-secondary">
+  Инструменты будут работать с вашими правами — увидят те же фирмы и задачи, что видны
+  вам в CRM, и ничего сверх этого.
+</p>
+
+<form method="post" action="/oauth_login" class="d-flex gap-2">
+  <input type="hidden" name="req" value="{{ req }}">
+  <button type="submit" name="decision" value="allow" class="btn btn-primary">Разрешить</button>
+  <button type="submit" name="decision" value="deny" class="btn btn-outline-secondary">Отмена</button>
+</form>
+{% endblock %}

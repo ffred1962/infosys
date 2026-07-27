@@ -1,0 +1,67 @@
+{% extends "base.html" %}
+
+{% block content %}
+<span class="badge text-bg-dark mb-3">Calculator</span>
+<h1 class="display-6 fw-semibold mb-3">Онлайн калькулятор</h1>
+<p class="lead text-secondary mb-4">
+  Введите два числа и нажмите кнопку для расчета суммы.
+</p>
+
+<form id="calculatorForm" class="mb-4">
+  <div class="row g-3">
+    <div class="col-12 col-md-5">
+      <label for="inputA" class="form-label">Первое число (a)</label>
+      <input
+        type="number"
+        class="form-control"
+        id="inputA"
+        placeholder="e.g. 5.5"
+        step="any"
+      />
+      <div id="errorA" class="invalid-feedback"></div>
+    </div>
+    <div class="col-12 col-md-5">
+      <label for="inputB" class="form-label">Второе число (b)</label>
+      <input
+        type="number"
+        class="form-control"
+        id="inputB"
+        placeholder="e.g. 3.2"
+        step="any"
+      />
+      <div id="errorB" class="invalid-feedback"></div>
+    </div>
+    <div class="col-12 col-md-2 d-flex align-items-end">
+      <button type="submit" class="btn btn-primary w-100">Расчет</button>
+    </div>
+  </div>
+</form>
+
+<div id="resultContainer" class="d-none">
+  <div class="alert alert-success alert-dismissible fade show" role="alert">
+    <strong>Результат:</strong>
+    <span id="resultValue" class="fw-bold"></span>
+    <button
+      type="button"
+      class="btn-close"
+      data-bs-dismiss="alert"
+      aria-label="Close"
+    ></button>
+  </div>
+</div>
+
+<div id="errorContainer" class="d-none">
+  <div class="alert alert-danger alert-dismissible fade show" role="alert">
+    <strong>Ошибка:</strong>
+    <span id="errorMessage"></span>
+    <button
+      type="button"
+      class="btn-close"
+      data-bs-dismiss="alert"
+      aria-label="Close"
+    ></button>
+  </div>
+</div>
+
+<script src="/js/calculator.js"></script>
+{% endblock %}

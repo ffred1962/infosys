@@ -1,0 +1,29 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(.venv/Scripts/python.exe -c ' *)",
+      "Bash(grep -n \"import models.notification\\\\`, \\\\`import models.search_category\\\\|both are now referenced by \\\\`Firm.city_id\\\\`\\\\|revision \\\\`ce6c6202b440\\\\`\\\\|revision \\\\`27089219faf6\\\\`\" d:/suurce/py/infosys/CLAUDE.md)",
+      "Bash(grep -n \"Task statuses \\(\\\\`/admin/taskstatus\\\\`\\), cities\" d:/suurce/py/infosys/CLAUDE.md)",
+      "Bash(sqlite3 data/infosys.db \"PRAGMA table_info\\(constants\\);\")",
+      "Bash(sqlite3 data/infosys.db \"PRAGMA index_list\\(constants\\);\")",
+      "Bash(.venv/Scripts/python.exe -c \"import main\")",
+      "Bash(.venv/Scripts/python.exe /tmp/smoke_constants.py)",
+      "Bash(sqlite3 data/infosys.db \"PRAGMA table_info\\(firm_goods\\);\")",
+      "Bash(sqlite3 data/infosys.db \"PRAGMA index_list\\(firm_goods\\);\")",
+      "Bash(sqlite3 data/infosys.db \"PRAGMA foreign_key_list\\(firm_goods\\);\")",
+      "Bash(sqlite3 data/infosys.db \"SELECT name, sql FROM sqlite_master WHERE tbl_name='firm_goods';\")",
+      "Bash(.venv/Scripts/python.exe \"C:/Users/user/AppData/Local/Temp/claude/d--suurce-py-infosys/3ed30b64-d788-47a8-9655-aebede879696/scratchpad/test_redirect_and_round2_failure.py\")",
+      "Bash(.venv/Scripts/pytest.exe -v)",
+      "Bash(.venv/Scripts/python.exe -m pytest -v)",
+      "Bash(.venv/Scripts/python.exe \"C:\\\\Users\\\\user\\\\AppData\\\\Local\\\\Temp\\\\claude\\\\d--suurce-py-infosys\\\\3ed30b64-d788-47a8-9655-aebede879696\\\\scratchpad\\\\mcp_smoke.py\")",
+      "Bash(.venv/Scripts/python.exe -c \"import secrets; print\\(secrets.token_urlsafe\\(32\\)\\)\")",
+      "Bash(.venv/Scripts/python.exe -m uvicorn main:app --host 127.0.0.1 --port 8000)",
+      "Bash(curl -s -o /dev/null -w \"docs status: %{http_code}\\\\n\" http://127.0.0.1:8000/docs)",
+      "Bash(.venv/Scripts/python.exe \"C:\\\\Users\\\\user\\\\AppData\\\\Local\\\\Temp\\\\claude\\\\d--suurce-py-infosys\\\\3ed30b64-d788-47a8-9655-aebede879696\\\\scratchpad\\\\mcp_live_test.py\")",
+      "Bash(.venv/Scripts/python.exe -m pytest -q --collect-only)",
+      "Bash(.venv/Scripts/python.exe -c \"import main; print\\('APP OK'\\)\")",
+      "Bash(powershell -NoProfile -Command 'Get-CimInstance Win32_Process -Filter \"Name='\\\\''python.exe'\\\\''\" | Where-Object { $_.CommandLine -like '\\\\''*uvicorn*main:app*'\\\\'' } | ForEach-Object { Stop-Process -Id $_.ProcessId -Force }')",
+      "Bash(curl -s -o /dev/null -w \"docs status after kill: %{http_code}\\\\n\" http://127.0.0.1:8000/docs --max-time 2)"
+    ]
+  }
+}

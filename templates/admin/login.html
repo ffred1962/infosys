@@ -1,0 +1,29 @@
+{% extends "base1.html" %}
+
+{% block topbar %}{% endblock %}
+
+{% block content %}
+<span class="badge text-bg-secondary mb-3">Вход</span>
+<h1 class="display-6 fw-semibold mb-3">Вход</h1>
+
+{% if error %}
+<div class="alert alert-danger" role="alert">{{ error }}</div>
+{% endif %}
+
+<form method="post" action="/admin/login">
+  <input type="hidden" name="next" value="{{ next or '/admin' }}">
+  <div class="row g-3">
+    <div class="col-12">
+      <label for="email" class="form-label">Email</label>
+      <input type="email" class="form-control" id="email" name="email" value="{{ email or '' }}" required>
+    </div>
+    <div class="col-12">
+      <label for="password" class="form-label">Пароль</label>
+      <input type="password" class="form-control" id="password" name="password" required>
+    </div>
+    <div class="col-12">
+      <button type="submit" class="btn btn-primary">Войти</button>
+    </div>
+  </div>
+</form>
+{% endblock %}

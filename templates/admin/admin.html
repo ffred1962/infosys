@@ -1,0 +1,20 @@
+{% extends "base1.html" %}
+
+{% block content %}
+<h1 class="display-6 fw-semibold mb-3">АДМИНКА</h1>
+<p class="lead text-secondary mb-0">
+  Это заготовка для админки
+</p>
+{% if current_user_email %}
+<p class="text-secondary small mt-3">Вы вошли как {{ current_user_email }}</p>
+{% endif %}
+<a href="/admin/usermgt" class="btn btn-outline-primary btn-sm mt-2">Управление пользователями</a>
+<a href="/admin/taskstatus" class="btn btn-outline-primary btn-sm mt-2">Статусы задач</a>
+<a href="/admin/city" class="btn btn-outline-primary btn-sm mt-2">Города</a>
+<a href="/admin/firmtype" class="btn btn-outline-primary btn-sm mt-2">Типы фирм</a>
+<a href="/admin/unit" class="btn btn-outline-primary btn-sm mt-2">Единицы измерения</a>
+<a href="/admin/constants" class="btn btn-outline-primary btn-sm mt-2">Константы</a>
+<a href="/admin/bugs" class="btn btn-outline-primary btn-sm mt-2">Баг-репорты</a>
+<a href="/admin/notifications" class="btn btn-outline-primary btn-sm mt-2">Уведомления</a>
+<a href="/admin/login_info" class="btn btn-outline-primary btn-sm mt-2">Журнал входов</a>
+{% endblock %}

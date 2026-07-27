@@ -1,0 +1,199 @@
+{% extends "base1.html" %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+  <h1 class="display-6 fw-semibold mb-0">Мои задачи</h1>
+  <button type="button" class="btn btn-primary btn-sm" id="taskCreateBtn" title="Новая задача" aria-label="Новая задача">
+    <i class="bi bi-plus-lg"></i> Новая задача
+  </button>
+</div>
+
+<div id="tasksError" class="alert alert-danger d-none" role="alert"></div>
+
+<ul class="nav nav-tabs mb-3" id="tasksTab" role="tablist">
+  <li class="nav-item" role="presentation">
+    <button class="nav-link active" id="authored-tab" data-bs-toggle="tab" data-bs-target="#authored-pane" type="button" role="tab" aria-controls="authored-pane" aria-selected="true">Выданные мной</button>
+  </li>
+  <li class="nav-item" role="presentation">
+    <button class="nav-link" id="assigned-tab" data-bs-toggle="tab" data-bs-target="#assigned-pane" type="button" role="tab" aria-controls="assigned-pane" aria-selected="false">Выданные мне</button>
+  </li>
+</ul>
+
+<div class="tab-content" id="tasksTabContent">
+  <div class="tab-pane fade show active" id="authored-pane" role="tabpanel" aria-labelledby="authored-tab">
+    <div class="table-responsive mb-4">
+      <table class="table align-middle">
+        <thead class="table-primary">
+          <tr>
+            <th style="width: 60px;">ID</th>
+            <th>Название</th>
+            <th>Исполнитель</th>
+            <th>Срок</th>
+            <th style="width: 150px;">Статус</th>
+            <th style="width: 100px;">Выполнено</th>
+            <th style="width: 90px;" class="text-end">Действия</th>
+          </tr>
+        </thead>
+        <tbody id="authoredBody">
+          {% for row in authored_tasks %}
+          <tr data-task-id="{{ row.task.id }}"
+              data-title="{{ row.task.title }}"
+              data-description="{{ row.task.description or '' }}"
+              data-due-date="{{ row.task.due_date.strftime('%Y-%m-%d') }}"
+              data-assignee-id="{{ row.task.assignee_id }}"
+              data-status-id="{{ row.task.status_id }}">
+            <td>{{ row.task.id }}</td>
+            <td><button type="button" class="btn btn-link p-0 text-start task-title-link">{{ row.task.title }}</button></td>
+            <td>{{ row.other_name }}</td>
+            <td>{{ row.task.due_date.strftime("%Y-%m-%d") }}</td>
+            <td><span class="badge text-bg-info task-status-badge">{{ row.status_name }}</span></td>
+            <td>
+              <span class="badge {% if row.task.completed %}text-bg-success{% else %}text-bg-secondary{% endif %} task-completed-badge">
+                {% if row.task.completed %}Да{% else %}Нет{% endif %}
+              </span>
+            </td>
+            <td class="text-end">
+              <div class="d-flex gap-1 justify-content-end">
+                <button type="button" class="btn btn-sm btn-outline-success task-complete-btn" title="Отметить выполнение" aria-label="Отметить выполнение задачи {{ row.task.id }}">
+                  <i class="bi bi-check-lg"></i>
+                </button>
+                <button type="button" class="btn btn-sm btn-outline-danger task-delete-btn" title="Удалить" aria-label="Удалить задачу {{ row.task.id }}">
+                  <i class="bi bi-trash"></i>
+                </button>
+              </div>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="tab-pane fade" id="assigned-pane" role="tabpanel" aria-labelledby="assigned-tab">
+    <div class="table-responsive mb-4">
+      <table class="table align-middle">
+        <thead class="table-primary">
+          <tr>
+            <th style="width: 60px;">ID</th>
+            <th>Название</th>
+            <th>Автор</th>
+            <th>Срок</th>
+            <th style="width: 150px;">Статус</th>
+            <th style="width: 100px;">Выполнено</th>
+          </tr>
+        </thead>
+        <tbody id="assignedBody">
+          {% for row in assigned_tasks %}
+          <tr data-task-id="{{ row.task.id }}"
+              data-description="{{ row.task.description or '' }}"
+              data-due-date="{{ row.task.due_date.strftime('%Y-%m-%d') }}"
+              data-author="{{ row.other_name }}"
+              data-status-id="{{ row.task.status_id }}">
+            <td>{{ row.task.id }}</td>
+            <td><button type="button" class="btn btn-link p-0 text-start task-title-link">{{ row.task.title }}</button></td>
+            <td>{{ row.other_name }}</td>
+            <td>{{ row.task.due_date.strftime("%Y-%m-%d") }}</td>
+            <td><span class="badge text-bg-info task-status-badge">{{ row.status_name }}</span></td>
+            <td>
+              <span class="badge {% if row.task.completed %}text-bg-success{% else %}text-bg-secondary{% endif %}">
+                {% if row.task.completed %}Да{% else %}Нет{% endif %}
+              </span>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<div class="modal fade" id="taskModal" tabindex="-1" aria-labelledby="taskModalLabel" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="taskModalLabel">Новая задача</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Закрыть"></button>
+      </div>
+      <div class="modal-body">
+        <div id="taskModalError" class="alert alert-danger d-none" role="alert"></div>
+        <input type="hidden" id="taskModalId" value="">
+        <div class="mb-3">
+          <label for="taskModalTitle" class="form-label">Название</label>
+          <input type="text" id="taskModalTitle" class="form-control" required>
+        </div>
+        <div class="mb-3">
+          <label for="taskModalDescription" class="form-label">Описание</label>
+          <textarea id="taskModalDescription" class="form-control" rows="3"></textarea>
+        </div>
+        <div class="row g-3">
+          <div class="col-12 col-md-6">
+            <label for="taskModalDueDate" class="form-label">Срок</label>
+            <input type="date" id="taskModalDueDate" class="form-control" required>
+          </div>
+          <div class="col-12 col-md-6">
+            <label for="taskModalAssignee" class="form-label">Исполнитель</label>
+            <select id="taskModalAssignee" class="form-select">
+              {% for u in users %}
+              <option value="{{ u.id }}">{{ u.fullname }}</option>
+              {% endfor %}
+            </select>
+          </div>
+        </div>
+        <div class="mb-3 mt-3" id="taskModalStatusGroup">
+          <label for="taskModalStatus" class="form-label">Статус</label>
+          <select id="taskModalStatus" class="form-select">
+            {% for s in statuses %}
+            <option value="{{ s.id }}">{{ s.name }}</option>
+            {% endfor %}
+          </select>
+          <div class="form-text">Начальный статус задачи. Дальше его меняет исполнитель — во вкладке «Выданные мне».</div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Отмена</button>
+        <button type="button" id="taskModalSaveBtn" class="btn btn-primary">Сохранить</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="modal fade" id="taskViewModal" tabindex="-1" aria-labelledby="taskViewModalLabel" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="taskViewModalLabel">Задача</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Закрыть"></button>
+      </div>
+      <div class="modal-body">
+        <div id="taskViewError" class="alert alert-danger d-none" role="alert"></div>
+        <input type="hidden" id="taskViewId" value="">
+        <dl class="row mb-3">
+          <dt class="col-4">Автор</dt>
+          <dd class="col-8" id="taskViewAuthor"></dd>
+          <dt class="col-4">Срок</dt>
+          <dd class="col-8" id="taskViewDueDate"></dd>
+          <dt class="col-4">Описание</dt>
+          <dd class="col-8" id="taskViewDescription"></dd>
+        </dl>
+        <div class="mb-0">
+          <label for="taskViewStatus" class="form-label">Статус</label>
+          <select id="taskViewStatus" class="form-select">
+            {% for s in statuses %}
+            <option value="{{ s.id }}">{{ s.name }}</option>
+            {% endfor %}
+          </select>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Закрыть</button>
+        <button type="button" id="taskViewSaveBtn" class="btn btn-primary">Сохранить статус</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script src="/js/tasks.js"></script>
+{% endblock %}

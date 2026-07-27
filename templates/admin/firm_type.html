@@ -1,0 +1,50 @@
+{% extends "base1.html" %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+  <h1 class="display-6 fw-semibold mb-0">Типы фирм</h1>
+</div>
+
+<div id="firmtypeError" class="alert alert-danger d-none" role="alert"></div>
+
+<div class="table-responsive mb-4">
+  <table class="table align-middle">
+    <thead class="table-primary">
+      <tr>
+        <th style="width: 60px;">ID</th>
+        <th>Название</th>
+        <th style="width: 90px;" class="text-end">Действия</th>
+      </tr>
+    </thead>
+    <tbody id="firmtypeBody">
+      {% for ft in firm_types %}
+      <tr data-firm-type-id="{{ ft.id }}">
+        <td>{{ ft.id }}</td>
+        <td>
+          <div class="d-flex gap-1">
+            <input type="text" class="form-control form-control-sm firmtype-name-input" value="{{ ft.name }}" required>
+            <button type="button" class="btn btn-sm btn-outline-primary firmtype-save-btn" title="Сохранить" aria-label="Сохранить тип фирмы {{ ft.name }}">
+              <i class="bi bi-check-lg"></i>
+            </button>
+          </div>
+        </td>
+        <td class="text-end">
+          <button type="button" class="btn btn-sm btn-outline-danger firmtype-delete-btn" title="Удалить" aria-label="Удалить тип фирмы {{ ft.name }}">
+            <i class="bi bi-trash"></i>
+          </button>
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+<div class="d-flex gap-1">
+  <input type="text" id="firmtypeNewName" class="form-control form-control-sm" placeholder="Новый тип фирмы" style="width: auto;" required>
+  <button type="button" id="firmtypeAddBtn" class="btn btn-sm btn-outline-success" title="Добавить" aria-label="Добавить тип фирмы">
+    <i class="bi bi-plus-lg"></i>
+  </button>
+</div>
+
+<script src="/js/firm_type.js"></script>
+{% endblock %}

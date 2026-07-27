@@ -1,0 +1,215 @@
+{% extends "base1.html" %}
+
+{% block content %}
+<h1 class="display-6 fw-semibold mb-4">Фирмы</h1>
+
+<form method="get" action="/crm/firms" class="row g-2 align-items-end mb-4">
+  <div class="col-12 col-sm-3">
+    <label for="firmsCity" class="form-label">Город</label>
+    <select id="firmsCity" name="city_id" class="form-select">
+      <option value="">Все города</option>
+      {% for city in cities %}
+      <option value="{{ city.id }}" {% if selected_city_id == city.id %}selected{% endif %}>{{ city.name }}</option>
+      {% endfor %}
+    </select>
+  </div>
+  <div class="col-12 col-sm-3">
+    <label for="firmsType" class="form-label">Тип фирмы</label>
+    <select id="firmsType" name="type_id" class="form-select">
+      <option value="">Все типы</option>
+      {% for firm_type in firm_types %}
+      <option value="{{ firm_type.id }}" {% if selected_type_id == firm_type.id %}selected{% endif %}>{{ firm_type.name }}</option>
+      {% endfor %}
+    </select>
+  </div>
+  <div class="col-12 col-sm-4">
+    <label for="firmsQ" class="form-label">Название</label>
+    <input type="text" id="firmsQ" name="q" class="form-control" placeholder="Поиск по названию" value="{{ q }}">
+  </div>
+  <div class="col-12 col-sm-2 d-flex gap-2">
+    <button type="submit" class="btn btn-primary flex-fill">
+      <i class="bi bi-funnel"></i> Найти
+    </button>
+    <a href="/crm/firms" class="btn btn-outline-secondary" title="Сбросить фильтр" aria-label="Сбросить фильтр">
+      <i class="bi bi-x-lg"></i>
+    </a>
+  </div>
+</form>
+
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <p class="text-secondary mb-0">Найдено: {{ total }}</p>
+  <div class="d-flex gap-2">
+    <a href="/crm/firm_finder" class="btn btn-outline-primary btn-sm">
+      <i class="bi bi-search"></i> Поиск фирм
+    </a>
+    <button type="button" class="btn btn-primary btn-sm" id="firmCreateBtn" title="Добавить фирму" aria-label="Добавить фирму">
+      <i class="bi bi-plus-lg"></i>
+    </button>
+  </div>
+</div>
+
+<div id="firmsError" class="alert alert-danger d-none" role="alert"></div>
+
+<div class="table-responsive">
+  <table class="table align-middle">
+    <thead class="table-primary">
+      <tr>
+        <th>Название</th>
+        <th>Город</th>
+        <th>Тип</th>
+        <th>Телефон</th>
+        <th>Сайт</th>
+        <th>Адрес</th>
+        <th>Источник</th>
+        <th>Нашёл</th>
+        <th>Примечание</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for row in firms %}
+      <tr>
+        <td>
+          <button type="button" class="btn btn-link p-0 text-start firm-name-link"
+            data-id="{{ row.firm.id }}"
+            data-name="{{ row.firm.name }}"
+            data-city-id="{{ row.firm.city_id }}"
+            data-type-id="{{ row.firm.type_id }}"
+            data-phone="{{ row.firm.phone or '' }}"
+            data-website="{{ row.firm.website or '' }}"
+            data-address="{{ row.firm.address or '' }}"
+            data-source="{{ row.firm.source or '' }}"
+            data-notes="{{ row.firm.notes or '' }}"
+            data-can-edit="{{ 'true' if row.can_edit else 'false' }}">{{ row.firm.name }}</button>
+        </td>
+        <td>{{ row.city_name }}</td>
+        <td>{{ row.type_name }}</td>
+        <td>{{ row.firm.phone or "—" }}</td>
+        <td>
+          {% if row.firm.website and (row.firm.website.startswith("http://") or row.firm.website.startswith("https://")) %}
+          <a href="{{ row.firm.website }}" target="_blank" rel="noopener noreferrer">{{ row.firm.website }}</a>
+          {% else %}
+          {{ row.firm.website or "—" }}
+          {% endif %}
+        </td>
+        <td>{{ row.firm.address or "—" }}</td>
+        <td>{{ row.firm.source or "—" }}</td>
+        <td>{{ row.finder_name }}</td>
+        <td>{{ row.firm.notes or "—" }}</td>
+      </tr>
+      {% else %}
+      <tr>
+        <td colspan="9" class="text-center text-secondary">Ничего не найдено.</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+{% if total_pages > 1 %}
+<nav aria-label="Пагинация фирм">
+  <ul class="pagination">
+    <li class="page-item {% if page <= 1 %}disabled{% endif %}">
+      {% if page <= 1 %}
+      <span class="page-link" aria-disabled="true">Предыдущая</span>
+      {% else %}
+      <a class="page-link" href="/crm/firms?{{ filter_query }}{{ '&' if filter_query }}page={{ page - 1 }}">Предыдущая</a>
+      {% endif %}
+    </li>
+    {% if page_numbers[0] > 1 %}
+    <li class="page-item"><a class="page-link" href="/crm/firms?{{ filter_query }}{{ '&' if filter_query }}page=1">1</a></li>
+    {% if page_numbers[0] > 2 %}
+    <li class="page-item disabled"><span class="page-link">…</span></li>
+    {% endif %}
+    {% endif %}
+    {% for p in page_numbers %}
+    <li class="page-item {% if p == page %}active{% endif %}">
+      <a class="page-link" href="/crm/firms?{{ filter_query }}{{ '&' if filter_query }}page={{ p }}">{{ p }}</a>
+    </li>
+    {% endfor %}
+    {% if page_numbers[-1] < total_pages %}
+    {% if page_numbers[-1] < total_pages - 1 %}
+    <li class="page-item disabled"><span class="page-link">…</span></li>
+    {% endif %}
+    <li class="page-item"><a class="page-link" href="/crm/firms?{{ filter_query }}{{ '&' if filter_query }}page={{ total_pages }}">{{ total_pages }}</a></li>
+    {% endif %}
+    <li class="page-item {% if page >= total_pages %}disabled{% endif %}">
+      {% if page >= total_pages %}
+      <span class="page-link" aria-disabled="true">Следующая</span>
+      {% else %}
+      <a class="page-link" href="/crm/firms?{{ filter_query }}{{ '&' if filter_query }}page={{ page + 1 }}">Следующая</a>
+      {% endif %}
+    </li>
+  </ul>
+</nav>
+{% endif %}
+
+<div class="modal fade" id="firmModal" tabindex="-1" aria-labelledby="firmModalLabel" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="firmModalLabel">Фирма</h5>
+        <a id="firmModalPricesLink" href="#" class="btn btn-outline-secondary btn-sm ms-auto me-2 d-none">
+          <i class="bi bi-cash-stack"></i> Прайсы
+        </a>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Закрыть"></button>
+      </div>
+      <div class="modal-body">
+        <div id="firmModalError" class="alert alert-danger d-none" role="alert"></div>
+        <input type="hidden" id="firmModalId">
+        <div class="mb-3">
+          <label for="firmModalName" class="form-label">Название</label>
+          <input type="text" id="firmModalName" class="form-control">
+        </div>
+        <div class="row g-2">
+          <div class="col-6 mb-3">
+            <label for="firmModalCity" class="form-label">Город</label>
+            <select id="firmModalCity" class="form-select">
+              <option value="">— выберите —</option>
+              {% for city in cities %}
+              <option value="{{ city.id }}">{{ city.name }}</option>
+              {% endfor %}
+            </select>
+          </div>
+          <div class="col-6 mb-3">
+            <label for="firmModalType" class="form-label">Тип</label>
+            <select id="firmModalType" class="form-select">
+              <option value="">— выберите —</option>
+              {% for firm_type in firm_types %}
+              <option value="{{ firm_type.id }}">{{ firm_type.name }}</option>
+              {% endfor %}
+            </select>
+          </div>
+        </div>
+        <div class="mb-3">
+          <label for="firmModalPhone" class="form-label">Телефон</label>
+          <input type="text" id="firmModalPhone" class="form-control">
+        </div>
+        <div class="mb-3">
+          <label for="firmModalWebsite" class="form-label">Сайт</label>
+          <input type="text" id="firmModalWebsite" class="form-control">
+        </div>
+        <div class="mb-3">
+          <label for="firmModalAddress" class="form-label">Адрес</label>
+          <input type="text" id="firmModalAddress" class="form-control">
+        </div>
+        <div class="mb-3">
+          <label for="firmModalSource" class="form-label">Источник</label>
+          <input type="text" id="firmModalSource" class="form-control">
+        </div>
+        <div class="mb-3">
+          <label for="firmModalNotes" class="form-label">Примечание</label>
+          <textarea id="firmModalNotes" class="form-control" rows="2"></textarea>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Закрыть</button>
+        <button type="button" id="firmModalSaveBtn" class="btn btn-primary">Сохранить</button>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="/js/firms.js"></script>
+{% endblock %}

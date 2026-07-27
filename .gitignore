@@ -1,0 +1,15 @@
+.env
+
+# Python bytecode cache
+__pycache__/
+*.pyc
+
+# Coverage / test artifacts
+.coverage
+htmlcov/
+
+# SQLite database (contains real user data — never commit)
+data/*.db
+
+# Generated, not source
+openapi.json

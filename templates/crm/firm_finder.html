@@ -1,0 +1,57 @@
+{% extends "base1.html" %}
+
+{% block content %}
+<h1 class="display-6 fw-semibold mb-4">Поиск фирм</h1>
+
+<div class="card shadow-sm border-0" style="max-width: 640px;">
+  <div class="card-body">
+    <form id="firmFinderForm">
+      <div class="mb-3">
+        <label for="firmFinderCity" class="form-label">Город</label>
+        <select id="firmFinderCity" class="form-select">
+          {% for city in cities %}
+          <option value="{{ city.id }}">{{ city.name }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="mb-3">
+        <label for="firmFinderFirmType" class="form-label">Тип фирмы</label>
+        <select id="firmFinderFirmType" class="form-select">
+          {% for firm_type in firm_types %}
+          <option value="{{ firm_type.id }}">{{ firm_type.name }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <button type="button" id="firmFinderSearchBtn" class="btn btn-primary">
+        <i class="bi bi-search"></i> Поиск
+      </button>
+    </form>
+  </div>
+</div>
+
+<div id="firmFinderError" class="alert alert-danger d-none mt-3" role="alert" style="max-width: 640px;"></div>
+
+<div id="firmFinderResults" class="mt-4 d-none">
+  <h2 class="h5 mb-3">Результаты поиска</h2>
+  <p id="firmFinderResultsEmpty" class="text-secondary d-none">Ничего не найдено.</p>
+  <div class="table-responsive">
+    <table class="table align-middle">
+      <thead class="table-primary">
+        <tr>
+          <th>Название</th>
+          <th>Телефон</th>
+          <th>Сайт</th>
+          <th>Адрес</th>
+          <th>Источник</th>
+          <th>Примечание</th>
+        </tr>
+      </thead>
+      <tbody id="firmFinderResultsBody"></tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="/js/firmfinder.js"></script>
+{% endblock %}

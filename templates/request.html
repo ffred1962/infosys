@@ -1,0 +1,48 @@
+{% extends "base.html" %}
+
+{% block content %}
+<span class="badge text-bg-dark mb-3">Request</span>
+<h1 class="display-6 fw-semibold mb-3">Информация из request</h1>
+<p class="lead text-secondary mb-4">
+  Здесь FastAPI показывает данные, которые пришли вместе с текущим запросом.
+</p>
+
+<div class="table-responsive">
+  <table class="table table-striped align-middle mb-0">
+    <tbody>
+      <tr>
+        <th scope="row">IP клиента</th>
+        <td>{{ client_host }}</td>
+      </tr>
+      <tr>
+        <th scope="row">Браузер</th>
+        <td>{{ user_agent }}</td>
+      </tr>
+      <tr>
+        <th scope="row">Язык</th>
+        <td>{{ accept_language }}</td>
+      </tr>
+      <tr>
+        <th scope="row">Метод</th>
+        <td>{{ request_method }}</td>
+      </tr>
+      <tr>
+        <th scope="row">URL</th>
+        <td>{{ request_url }}</td>
+      </tr>
+      <tr>
+        <th scope="row">Путь</th>
+        <td>{{ request_path }}</td>
+      </tr>
+      <tr>
+        <th scope="row">Query string</th>
+        <td>{{ request_query or "Пусто" }}</td>
+      </tr>
+      <tr>
+        <th scope="row">Referrer</th>
+        <td>{{ referrer }}</td>
+      </tr>
+    </tbody>
+  </table>
+</div>
+{% endblock %}

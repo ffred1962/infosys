@@ -1,0 +1,39 @@
+{% extends "base1.html" %}
+
+{% block topbar %}{% endblock %}
+
+{% block content %}
+<span class="badge text-bg-warning mb-3">Первый запуск</span>
+<h1 class="display-6 fw-semibold mb-3">Создание администратора</h1>
+<p class="lead text-secondary mb-4">
+  В системе ещё нет ни одного пользователя. Создайте первую учётную запись — ей автоматически будет назначена роль admin.
+</p>
+
+{% if error %}
+<div class="alert alert-danger" role="alert">{{ error }}</div>
+{% endif %}
+
+<form method="post" action="/admin/setup">
+  <div class="row g-3">
+    <div class="col-12 col-md-6">
+      <label for="email" class="form-label">Email</label>
+      <input type="email" class="form-control" id="email" name="email" value="{{ email or '' }}" required>
+    </div>
+    <div class="col-12 col-md-6">
+      <label for="name" class="form-label">Имя</label>
+      <input type="text" class="form-control" id="name" name="name" value="{{ name or '' }}" required>
+    </div>
+    <div class="col-12">
+      <label for="fullname" class="form-label">Полное имя</label>
+      <input type="text" class="form-control" id="fullname" name="fullname" value="{{ fullname or '' }}" required>
+    </div>
+    <div class="col-12">
+      <label for="password" class="form-label">Пароль (не менее 8 символов)</label>
+      <input type="password" class="form-control" id="password" name="password" minlength="8" required>
+    </div>
+    <div class="col-12">
+      <button type="submit" class="btn btn-primary">Создать администратора</button>
+    </div>
+  </div>
+</form>
+{% endblock %}

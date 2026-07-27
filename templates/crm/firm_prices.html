@@ -1,0 +1,47 @@
+{% extends "base1.html" %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+  <div>
+    <h1 class="display-6 fw-semibold mb-0">Прайсы: {{ firm.name }}</h1>
+  </div>
+  <div class="d-flex gap-2">
+    <button type="button" class="btn btn-primary btn-sm" id="firmPriceDownloadBtn" data-firm-id="{{ firm.id }}">
+      <i class="bi bi-cloud-download"></i> Скачать прайс
+    </button>
+    <a href="{{ close_url }}" class="btn btn-outline-secondary btn-sm" title="Закрыть" aria-label="Закрыть">
+      <i class="bi bi-x-lg"></i>
+    </a>
+  </div>
+</div>
+
+<div id="firmPriceDownloadError" class="alert alert-danger d-none" role="alert"></div>
+<div id="firmPriceDownloadSuccess" class="alert alert-success d-none" role="alert"></div>
+
+<div class="table-responsive">
+  <table class="table align-middle">
+    <thead class="table-primary">
+      <tr>
+        <th>Дата</th>
+        <th>Примечание</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for price in prices %}
+      <tr>
+        <td>{{ price.created.strftime("%Y-%m-%d") }}</td>
+        <td>{{ price.rem or "—" }}</td>
+      </tr>
+      {% else %}
+      <tr>
+        <td colspan="2" class="text-center text-secondary">Нет прайс-листов для этой фирмы.</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="/js/firm_prices.js"></script>
+{% endblock %}

@@ -1,0 +1,34 @@
+{% extends "base1.html" %}
+
+{% block content %}
+<h1 class="display-6 fw-semibold mb-3">Новый пользователь</h1>
+
+{% if error %}
+<div class="alert alert-danger" role="alert">{{ error }}</div>
+{% endif %}
+
+<form method="post" action="/admin/usermgt/new">
+  <div class="row g-3">
+    <div class="col-12 col-md-6">
+      <label for="email" class="form-label">Email</label>
+      <input type="email" class="form-control" id="email" name="email" value="{{ email or '' }}" required>
+    </div>
+    <div class="col-12 col-md-6">
+      <label for="name" class="form-label">Имя</label>
+      <input type="text" class="form-control" id="name" name="name" value="{{ name or '' }}" required>
+    </div>
+    <div class="col-12">
+      <label for="fullname" class="form-label">Полное имя</label>
+      <input type="text" class="form-control" id="fullname" name="fullname" value="{{ fullname or '' }}" required>
+    </div>
+    <div class="col-12">
+      <label for="password" class="form-label">Пароль (не менее 8 символов)</label>
+      <input type="password" class="form-control" id="password" name="password" minlength="8" required>
+    </div>
+    <div class="col-12 d-flex gap-2">
+      <button type="submit" class="btn btn-primary">Создать</button>
+      <a href="/admin/usermgt" class="btn btn-outline-secondary">Отмена</a>
+    </div>
+  </div>
+</form>
+{% endblock %}

@@ -1,0 +1,11 @@
+{
+    "sqltools.useNodeRuntime": true,
+    "sqltools.connections": [
+        {
+            "previewLimit": 50,
+            "driver": "SQLite",
+            "name": "infosys1",
+            "database": "${workspaceFolder:infosys}/data/infosys.db"
+        }
+    ]
+}

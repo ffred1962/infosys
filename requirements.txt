@@ -1,0 +1,12 @@
+fastapi[standard]
+pytest
+pytest-cov
+httpx
+sqlmodel
+alembic
+bcrypt
+itsdangerous
+anthropic
+python-dotenv
+beautifulsoup4
+mcp

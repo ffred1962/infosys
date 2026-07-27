@@ -1,0 +1,51 @@
+{% extends "base1.html" %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+  <h1 class="display-6 fw-semibold mb-0">Баг-репорты</h1>
+</div>
+
+<div id="bugsError" class="alert alert-danger d-none" role="alert"></div>
+
+<div class="table-responsive mb-4">
+  <table class="table align-middle">
+    <thead class="table-primary">
+      <tr>
+        <th style="width: 60px;">ID</th>
+        <th>Дата</th>
+        <th>Автор</th>
+        <th>Описание</th>
+        <th style="width: 110px;">Статус</th>
+        <th style="width: 90px;" class="text-end">Действия</th>
+      </tr>
+    </thead>
+    <tbody id="bugsBody">
+      {% for row in bugs %}
+      <tr data-bug-id="{{ row.bug.id }}">
+        <td>{{ row.bug.id }}</td>
+        <td>{{ row.bug.creation_date.strftime("%Y-%m-%d %H:%M") }}</td>
+        <td>{{ row.reporter_email }}</td>
+        <td>{{ row.bug.title }}</td>
+        <td>
+          <span class="badge {% if row.bug.isopen %}text-bg-warning{% else %}text-bg-success{% endif %} bug-status-badge">
+            {% if row.bug.isopen %}Открыт{% else %}Закрыт{% endif %}
+          </span>
+        </td>
+        <td class="text-end">
+          <div class="d-flex gap-1 justify-content-end">
+            <button type="button" class="btn btn-sm btn-outline-primary bug-toggle-btn" title="Открыть/закрыть" aria-label="Изменить статус бага {{ row.bug.id }}">
+              <i class="bi bi-arrow-repeat"></i>
+            </button>
+            <button type="button" class="btn btn-sm btn-outline-danger bug-delete-btn" title="Удалить" aria-label="Удалить баг {{ row.bug.id }}">
+              <i class="bi bi-trash"></i>
+            </button>
+          </div>
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+<script src="/js/bugs.js"></script>
+{% endblock %}

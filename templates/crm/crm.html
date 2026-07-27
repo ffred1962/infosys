@@ -1,0 +1,309 @@
+{% extends "base1.html" %}
+
+{% block content %}
+<style>
+  .crm-charts {
+    --chart-series: #2a78d6;
+    --chart-text-primary: #0b0b0b;
+    --chart-text-secondary: #52514e;
+    --chart-text-muted: #898781;
+    --chart-gridline: #e1e0d9;
+  }
+  .crm-charts .bar-row {
+    display: grid;
+    grid-template-columns: minmax(120px, 160px) 1fr 44px;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 5px 6px;
+    border-radius: 6px;
+  }
+  .crm-charts .bar-row:hover,
+  .crm-charts .bar-row:focus-within {
+    background: rgba(42, 120, 214, 0.08);
+  }
+  .crm-charts .bar-row-label {
+    font-size: 0.875rem;
+    color: var(--chart-text-secondary);
+  }
+  .crm-charts .bar-track {
+    position: relative;
+    height: 18px;
+    border-bottom: 1px solid var(--chart-gridline);
+  }
+  .crm-charts .bar-fill {
+    position: absolute;
+    inset: 0 auto 0 0;
+    height: 100%;
+    width: 0;
+    background: var(--chart-series);
+    border-radius: 0 4px 4px 0;
+    transition: width 0.4s ease;
+  }
+  .crm-charts .bar-row-value {
+    font-variant-numeric: tabular-nums;
+    font-weight: 600;
+    color: var(--chart-text-primary);
+    text-align: right;
+  }
+  .crm-charts .chart-empty {
+    color: var(--chart-text-muted);
+    font-size: 0.875rem;
+  }
+  .crm-charts .donut-legend {
+    min-width: 180px;
+  }
+  .crm-charts .donut-swatch {
+    display: inline-block;
+    width: 12px;
+    height: 12px;
+    border-radius: 3px;
+    flex: 0 0 auto;
+  }
+  .crm-charts .donut-legend-label {
+    font-size: 0.875rem;
+    color: var(--chart-text-secondary);
+  }
+  .crm-charts .donut-legend-value {
+    font-variant-numeric: tabular-nums;
+    font-weight: 600;
+    color: var(--chart-text-primary);
+    white-space: nowrap;
+  }
+  .crm-charts .donut-segment {
+    cursor: pointer;
+    transition: opacity 0.15s ease;
+  }
+  .crm-charts svg a:hover .donut-segment,
+  .crm-charts svg a:focus-visible .donut-segment {
+    opacity: 0.75;
+  }
+  .crm-charts .donut-legend-link {
+    color: inherit;
+    text-decoration: none;
+    border-radius: 6px;
+    padding: 2px 4px;
+    margin: -2px -4px;
+  }
+  .crm-charts .donut-legend-link:hover,
+  .crm-charts .donut-legend-link:focus-visible {
+    background: rgba(42, 120, 214, 0.08);
+  }
+</style>
+
+<h1 class="display-6 fw-semibold mb-3">CRM</h1>
+<p class="lead text-secondary mb-3">
+  А здесь живет CRM. В ней можно будет хранить контакты, задачи, сделки и прочее.
+</p>
+<a href="/crm/tasks" class="btn btn-outline-primary btn-sm mb-4">Мои задачи</a>
+<a href="/crm/firms" class="btn btn-outline-primary btn-sm mb-4">Фирмы</a>
+
+<div class="crm-charts row g-3">
+  <div class="col-12 col-lg-6">
+    <div class="card shadow-sm border-0 h-100">
+      <div class="card-body">
+        <div class="d-flex justify-content-between align-items-start mb-3">
+          <h2 class="h6 fw-semibold mb-0">Задачи, которые я выдал — по статусам</h2>
+          {% if authored_chart|sum(attribute="count") > 0 %}
+          <button type="button" class="btn btn-sm btn-outline-secondary chart-table-toggle" data-chart="authored">Таблица</button>
+          {% endif %}
+        </div>
+
+        {% if authored_chart|sum(attribute="count") == 0 %}
+        <p class="chart-empty mb-0">Вы пока не выдали ни одной задачи.</p>
+        {% else %}
+        <div id="authored-chart-view">
+          {% for row in authored_chart %}
+          <div class="bar-row" tabindex="0">
+            <div class="bar-row-label">{{ row.label }}</div>
+            <div class="bar-track">
+              <div class="bar-fill" data-pct="{{ row.pct }}"></div>
+            </div>
+            <div class="bar-row-value">{{ row.count }}</div>
+          </div>
+          {% endfor %}
+        </div>
+        <table class="table table-sm d-none" id="authored-chart-table">
+          <thead><tr><th>Статус</th><th class="text-end">Количество</th></tr></thead>
+          <tbody>
+            {% for row in authored_chart %}
+            <tr><td>{{ row.label }}</td><td class="text-end">{{ row.count }}</td></tr>
+            {% endfor %}
+          </tbody>
+        </table>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+
+  <div class="col-12 col-lg-6">
+    <div class="card shadow-sm border-0 h-100">
+      <div class="card-body">
+        <div class="d-flex justify-content-between align-items-start mb-3">
+          <h2 class="h6 fw-semibold mb-0">Задачи, выданные мне — по статусам</h2>
+          {% if assigned_chart|sum(attribute="count") > 0 %}
+          <button type="button" class="btn btn-sm btn-outline-secondary chart-table-toggle" data-chart="assigned">Таблица</button>
+          {% endif %}
+        </div>
+
+        {% if assigned_chart|sum(attribute="count") == 0 %}
+        <p class="chart-empty mb-0">Вам пока не выдали ни одной задачи.</p>
+        {% else %}
+        <div id="assigned-chart-view">
+          {% for row in assigned_chart %}
+          <div class="bar-row" tabindex="0">
+            <div class="bar-row-label">{{ row.label }}</div>
+            <div class="bar-track">
+              <div class="bar-fill" data-pct="{{ row.pct }}"></div>
+            </div>
+            <div class="bar-row-value">{{ row.count }}</div>
+          </div>
+          {% endfor %}
+        </div>
+        <table class="table table-sm d-none" id="assigned-chart-table">
+          <thead><tr><th>Статус</th><th class="text-end">Количество</th></tr></thead>
+          <tbody>
+            {% for row in assigned_chart %}
+            <tr><td>{{ row.label }}</td><td class="text-end">{{ row.count }}</td></tr>
+            {% endfor %}
+          </tbody>
+        </table>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="crm-charts row g-3 mt-1">
+  <div class="col-12 col-lg-6">
+    <div class="card shadow-sm border-0 h-100">
+      <div class="card-body">
+        <div class="d-flex justify-content-between align-items-start mb-3">
+          <h2 class="h6 fw-semibold mb-0">Фирмы по городам</h2>
+          {% if firm_city_chart %}
+          <button type="button" class="btn btn-sm btn-outline-secondary chart-table-toggle" data-chart="firm-city">Таблица</button>
+          {% endif %}
+        </div>
+
+        {% if not firm_city_chart %}
+        <p class="chart-empty mb-0">Пока нет ни одной фирмы.</p>
+        {% else %}
+        <div id="firm-city-chart-view" class="d-flex flex-wrap align-items-center gap-4">
+          <svg viewBox="0 0 140 140" width="150" height="150">
+            {% for slice in firm_city_chart %}
+            {% if slice.id is not none %}
+            <a href="/crm/firms?city_id={{ slice.id }}" aria-label="Фирмы в городе {{ slice.label }}: {{ slice.count }} ({{ slice.pct }}%)">
+              <circle cx="70" cy="70" r="{{ donut_hit_radius }}" fill="none" stroke="{{ slice.color }}" stroke-width="{{ donut_hit_stroke_width }}"
+                stroke-dasharray="{{ slice.hit_dash_array }}" opacity="0"
+                transform="rotate({{ slice.rotate_deg - 90 }} 70 70)"></circle>
+              <circle cx="70" cy="70" r="{{ donut_radius }}" fill="none" stroke="{{ slice.color }}" stroke-width="{{ donut_stroke_width }}"
+                stroke-dasharray="{{ slice.dash_array }}"
+                transform="rotate({{ slice.rotate_deg - 90 }} 70 70)" class="donut-segment"></circle>
+            </a>
+            {% else %}
+            <circle cx="70" cy="70" r="{{ donut_radius }}" fill="none" stroke="{{ slice.color }}" stroke-width="{{ donut_stroke_width }}"
+              stroke-dasharray="{{ slice.dash_array }}"
+              transform="rotate({{ slice.rotate_deg - 90 }} 70 70)"></circle>
+            {% endif %}
+            {% endfor %}
+          </svg>
+          <ul class="donut-legend list-unstyled mb-0 flex-fill">
+            {% for slice in firm_city_chart %}
+            <li class="mb-1">
+              {% if slice.id is not none %}
+              <a href="/crm/firms?city_id={{ slice.id }}" class="donut-legend-link d-flex align-items-center gap-2" aria-label="Фирмы в городе {{ slice.label }}: {{ slice.count }} ({{ slice.pct }}%)">
+                <span class="donut-swatch" style="background-color: {{ slice.color }};"></span>
+                <span class="donut-legend-label flex-fill">{{ slice.label }}</span>
+                <span class="donut-legend-value">{{ slice.count }} ({{ slice.pct }}%)</span>
+              </a>
+              {% else %}
+              <div class="d-flex align-items-center gap-2">
+                <span class="donut-swatch" style="background-color: {{ slice.color }};"></span>
+                <span class="donut-legend-label flex-fill">{{ slice.label }}</span>
+                <span class="donut-legend-value">{{ slice.count }} ({{ slice.pct }}%)</span>
+              </div>
+              {% endif %}
+            </li>
+            {% endfor %}
+          </ul>
+        </div>
+        <table class="table table-sm d-none" id="firm-city-chart-table">
+          <thead><tr><th>Город</th><th class="text-end">Количество</th><th class="text-end">Доля</th></tr></thead>
+          <tbody>
+            {% for slice in firm_city_chart %}
+            <tr><td>{{ slice.label }}</td><td class="text-end">{{ slice.count }}</td><td class="text-end">{{ slice.pct }}%</td></tr>
+            {% endfor %}
+          </tbody>
+        </table>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+
+  <div class="col-12 col-lg-6">
+    <div class="card shadow-sm border-0 h-100">
+      <div class="card-body">
+        <div class="d-flex justify-content-between align-items-start mb-3">
+          <h2 class="h6 fw-semibold mb-0">Фирмы по типам</h2>
+          {% if firm_type_chart %}
+          <button type="button" class="btn btn-sm btn-outline-secondary chart-table-toggle" data-chart="firm-type">Таблица</button>
+          {% endif %}
+        </div>
+
+        {% if not firm_type_chart %}
+        <p class="chart-empty mb-0">Пока нет ни одной фирмы.</p>
+        {% else %}
+        <div id="firm-type-chart-view" class="d-flex flex-wrap align-items-center gap-4">
+          <svg viewBox="0 0 140 140" width="150" height="150">
+            {% for slice in firm_type_chart %}
+            {% if slice.id is not none %}
+            <a href="/crm/firms?type_id={{ slice.id }}" aria-label="Фирмы типа {{ slice.label }}: {{ slice.count }} ({{ slice.pct }}%)">
+              <circle cx="70" cy="70" r="{{ donut_hit_radius }}" fill="none" stroke="{{ slice.color }}" stroke-width="{{ donut_hit_stroke_width }}"
+                stroke-dasharray="{{ slice.hit_dash_array }}" opacity="0"
+                transform="rotate({{ slice.rotate_deg - 90 }} 70 70)"></circle>
+              <circle cx="70" cy="70" r="{{ donut_radius }}" fill="none" stroke="{{ slice.color }}" stroke-width="{{ donut_stroke_width }}"
+                stroke-dasharray="{{ slice.dash_array }}"
+                transform="rotate({{ slice.rotate_deg - 90 }} 70 70)" class="donut-segment"></circle>
+            </a>
+            {% else %}
+            <circle cx="70" cy="70" r="{{ donut_radius }}" fill="none" stroke="{{ slice.color }}" stroke-width="{{ donut_stroke_width }}"
+              stroke-dasharray="{{ slice.dash_array }}"
+              transform="rotate({{ slice.rotate_deg - 90 }} 70 70)"></circle>
+            {% endif %}
+            {% endfor %}
+          </svg>
+          <ul class="donut-legend list-unstyled mb-0 flex-fill">
+            {% for slice in firm_type_chart %}
+            <li class="mb-1">
+              {% if slice.id is not none %}
+              <a href="/crm/firms?type_id={{ slice.id }}" class="donut-legend-link d-flex align-items-center gap-2" aria-label="Фирмы типа {{ slice.label }}: {{ slice.count }} ({{ slice.pct }}%)">
+                <span class="donut-swatch" style="background-color: {{ slice.color }};"></span>
+                <span class="donut-legend-label flex-fill">{{ slice.label }}</span>
+                <span class="donut-legend-value">{{ slice.count }} ({{ slice.pct }}%)</span>
+              </a>
+              {% else %}
+              <div class="d-flex align-items-center gap-2">
+                <span class="donut-swatch" style="background-color: {{ slice.color }};"></span>
+                <span class="donut-legend-label flex-fill">{{ slice.label }}</span>
+                <span class="donut-legend-value">{{ slice.count }} ({{ slice.pct }}%)</span>
+              </div>
+              {% endif %}
+            </li>
+            {% endfor %}
+          </ul>
+        </div>
+        <table class="table table-sm d-none" id="firm-type-chart-table">
+          <thead><tr><th>Тип</th><th class="text-end">Количество</th><th class="text-end">Доля</th></tr></thead>
+          <tbody>
+            {% for slice in firm_type_chart %}
+            <tr><td>{{ slice.label }}</td><td class="text-end">{{ slice.count }}</td><td class="text-end">{{ slice.pct }}%</td></tr>
+            {% endfor %}
+          </tbody>
+        </table>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="/js/crm_charts.js"></script>
+{% endblock %}

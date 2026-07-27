@@ -1,0 +1,50 @@
+{% extends "base1.html" %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+  <h1 class="display-6 fw-semibold mb-0">Города</h1>
+</div>
+
+<div id="cityError" class="alert alert-danger d-none" role="alert"></div>
+
+<div class="table-responsive mb-4">
+  <table class="table align-middle">
+    <thead class="table-primary">
+      <tr>
+        <th style="width: 60px;">ID</th>
+        <th>Название</th>
+        <th style="width: 90px;" class="text-end">Действия</th>
+      </tr>
+    </thead>
+    <tbody id="cityBody">
+      {% for c in cities %}
+      <tr data-city-id="{{ c.id }}">
+        <td>{{ c.id }}</td>
+        <td>
+          <div class="d-flex gap-1">
+            <input type="text" class="form-control form-control-sm city-name-input" value="{{ c.name }}" required>
+            <button type="button" class="btn btn-sm btn-outline-primary city-save-btn" title="Сохранить" aria-label="Сохранить город {{ c.name }}">
+              <i class="bi bi-check-lg"></i>
+            </button>
+          </div>
+        </td>
+        <td class="text-end">
+          <button type="button" class="btn btn-sm btn-outline-danger city-delete-btn" title="Удалить" aria-label="Удалить город {{ c.name }}">
+            <i class="bi bi-trash"></i>
+          </button>
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+<div class="d-flex gap-1">
+  <input type="text" id="cityNewName" class="form-control form-control-sm" placeholder="Новый город" style="width: auto;" required>
+  <button type="button" id="cityAddBtn" class="btn btn-sm btn-outline-success" title="Добавить" aria-label="Добавить город">
+    <i class="bi bi-plus-lg"></i>
+  </button>
+</div>
+
+<script src="/js/city.js"></script>
+{% endblock %}

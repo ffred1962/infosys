@@ -1,0 +1,52 @@
+{% extends "base1.html" %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+  <h1 class="display-6 fw-semibold mb-0">Константы</h1>
+</div>
+
+<div id="constantError" class="alert alert-danger d-none" role="alert"></div>
+
+<div class="table-responsive mb-4">
+  <table class="table align-middle">
+    <thead class="table-primary">
+      <tr>
+        <th style="width: 60px;">ID</th>
+        <th>Название</th>
+        <th>Значение</th>
+        <th style="width: 160px;">Обновлено</th>
+        <th style="width: 60px;" class="text-end">Действия</th>
+      </tr>
+    </thead>
+    <tbody id="constantBody">
+      {% for c in constants %}
+      <tr data-constant-id="{{ c.id }}">
+        <td>{{ c.id }}</td>
+        <td>
+          <input type="text" class="form-control form-control-sm constant-name-input" value="{{ c.name }}" required>
+        </td>
+        <td>
+          <input type="text" class="form-control form-control-sm constant-value-input" value="{{ c.value }}" required>
+        </td>
+        <td class="constant-updated">{{ c.updated.strftime("%Y-%m-%d %H:%M") }}</td>
+        <td class="text-end">
+          <button type="button" class="btn btn-sm btn-outline-primary constant-save-btn" title="Сохранить" aria-label="Сохранить константу {{ c.name }}">
+            <i class="bi bi-check-lg"></i>
+          </button>
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+<div class="d-flex gap-1">
+  <input type="text" id="constantNewName" class="form-control form-control-sm" placeholder="Название" style="width: auto;" required>
+  <input type="text" id="constantNewValue" class="form-control form-control-sm" placeholder="Значение" style="width: auto;" required>
+  <button type="button" id="constantAddBtn" class="btn btn-sm btn-outline-success" title="Добавить" aria-label="Добавить константу">
+    <i class="bi bi-plus-lg"></i>
+  </button>
+</div>
+
+<script src="/js/constants.js"></script>
+{% endblock %}

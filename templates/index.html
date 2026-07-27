@@ -1,0 +1,24 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="mb-4 text-center">
+  <a href="http://127.0.0.1:9000/bukpic/%D0%BB%D0%BE%D0%B3%D0%BE_%D0%90%D0%9C%D0%A4_new.png" target="_blank" rel="noreferrer">
+    <img
+      src="http://127.0.0.1:9000/bukpic/%D0%BB%D0%BE%D0%B3%D0%BE_%D0%90%D0%9C%D0%A4_new.png"
+      class="img-fluid rounded shadow-sm"
+      style="max-width: 360px;"
+      alt="Миньо картинка"
+    />
+  </a>
+</div>
+<span class="badge text-bg-primary mb-3">FastAPI study</span>
+<h1 class="display-6 fw-semibold mb-3">Привет, Bootstrap</h1>
+<p class="lead text-secondary mb-4">
+  Это первый статический HTML-файл в проекте. Мы используем Bootstrap
+  как стандартную базу для сетки, отступов и компонентов.
+</p>
+<div class="d-flex gap-2 flex-wrap">
+  <a class="btn btn-primary" href="https://getbootstrap.com/" target="_blank" rel="noreferrer">Bootstrap docs</a>
+  <a class="btn btn-outline-secondary" href="/about">О проекте</a>
+</div>
+{% endblock %}
