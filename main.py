@@ -26,6 +26,7 @@ from api.task import router as api_task_router
 from api.firm import router as api_firm_router
 from api.mcp_server import mcp as infosys_mcp
 from core.auth import SESSION_COOKIE_SECURE, SESSION_SECRET_KEY
+from db.migrate import upgrade_to_head
 from middlewares.no_cache import no_cache_admin_middleware
 from middlewares.request_logging import request_logging_middleware
 from routers.admin_auth import router as admin_auth_router
@@ -36,6 +37,10 @@ from routers.pages import router as pages_router
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    # Накатываем миграции до head при каждом старте — на облачном/эфемерном
+    # деплое data/infosys.db может не быть вообще (см. db/migrate.py); локально
+    # это идемпотентный no-op, раз БД уже на head.
+    upgrade_to_head()
     # Обязателен для смонтированного MCP-моста (streamable HTTP) — session_manager.run()
     # поднимает фоновую task group, без которой любой MCP-запрос падает с
     # "session manager is not running".
