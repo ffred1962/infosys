@@ -1,4 +1,14 @@
 from logging.config import fileConfig
+from pathlib import Path
+
+from dotenv import load_dotenv
+
+# Грузим .env раньше импорта db.database — так же, как main.py делает это перед
+# импортом core.auth (см. комментарий там). Без этого `alembic` из командной
+# строки не увидит DATABASE_URL из .env (в отличие от db.migrate.upgrade_to_head(),
+# который main.py вызывает уже ПОСЛЕ своего load_dotenv()) и всегда мигрировал
+# бы локальный SQLite, даже когда приложение сконфигурировано на внешнюю БД.
+load_dotenv(Path(__file__).resolve().parent.parent / ".env")
 
 from sqlalchemy import engine_from_config
 from sqlalchemy import pool
@@ -33,6 +43,13 @@ from db.database import DB_URL
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.
 config = context.config
+
+# db.database.DB_URL — единственный источник правды по адресу БД (сам решает,
+# SQLite по умолчанию или DATABASE_URL из .env/окружения) — переопределяем им
+# статичный sqlalchemy.url из alembic.ini, чтобы alembic (что при ручном
+# вызове, что при db.migrate.upgrade_to_head() из main.py) всегда мигрировал
+# ту же БД, к которой подключается само приложение, а не рассинхронизировался.
+config.set_main_option("sqlalchemy.url", DB_URL)
 
 # Interpret the config file for Python logging.
 # This line sets up loggers basically.

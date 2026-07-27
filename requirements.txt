@@ -10,3 +10,4 @@ anthropic
 python-dotenv
 beautifulsoup4
 mcp
+psycopg2-binary
