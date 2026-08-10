@@ -14,6 +14,8 @@ if (firmModalEl) {
   const saveBtn = document.getElementById("firmModalSaveBtn");
   const pricesLink = document.getElementById("firmModalPricesLink");
   const commentsLink = document.getElementById("firmModalCommentsLink");
+  const channelsLink = document.getElementById("firmModalChannelsLink");
+  const eventsLink = document.getElementById("firmModalEventsLink");
 
   const idInput = document.getElementById("firmModalId");
   const creationDateEl = document.getElementById("firmModalCreationDate");
@@ -85,6 +87,8 @@ if (firmModalEl) {
     creationDateEl.classList.add("d-none");
     pricesLink.classList.add("d-none");
     commentsLink.classList.add("d-none");
+    channelsLink.classList.add("d-none");
+    eventsLink.classList.add("d-none");
     firmModal.show();
   }
 
@@ -112,6 +116,10 @@ if (firmModalEl) {
     pricesLink.classList.remove("d-none");
     commentsLink.href = `/crm/firms/${link.dataset.id}/comments?return_to=${encodeURIComponent(returnTo)}`;
     commentsLink.classList.remove("d-none");
+    channelsLink.href = `/crm/firms/${link.dataset.id}/channels?return_to=${encodeURIComponent(returnTo)}`;
+    channelsLink.classList.remove("d-none");
+    eventsLink.href = `/crm/firms/${link.dataset.id}/events?return_to=${encodeURIComponent(returnTo)}`;
+    eventsLink.classList.remove("d-none");
     firmModal.show();
   }
 

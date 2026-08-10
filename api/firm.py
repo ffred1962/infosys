@@ -18,9 +18,12 @@ from core.auth import resolve_authenticated_access, user_has_role
 from core.firm_price_download import FirmPriceDownloadError, download_firm_price
 from core.firm_search import FirmSearchError, search_firms
 from db.database import get_session
+from models.channel_type import ChannelType
 from models.city import City
 from models.firm import Firm
+from models.firm_channel import FirmChannel
 from models.firm_comment import FirmComment
+from models.firm_event import FirmEvent
 from models.firm_goods import FirmGoods
 from models.firm_price import FirmPrice
 from models.firm_price_body import FirmPriceBody
@@ -60,6 +63,34 @@ def _get_firm_or_404(session: Session, firm_id: int) -> Firm:
     if firm is None:
         raise HTTPException(status_code=404, detail="Фирма не найдена.")
     return firm
+
+
+def _get_channel_type_or_404(session: Session, channel_id: int) -> ChannelType:
+    channel_type = session.get(ChannelType, channel_id)
+    if channel_type is None:
+        raise HTTPException(status_code=404, detail="Тип канала не найден.")
+    return channel_type
+
+
+def _get_firm_channel_or_404(session: Session, firm_id: int, channel_row_id: int) -> FirmChannel:
+    channel = session.get(FirmChannel, channel_row_id)
+    if channel is None or channel.firm_id != firm_id:
+        raise HTTPException(status_code=404, detail="Канал связи не найден.")
+    return channel
+
+
+def _get_firm_event_or_404(session: Session, firm_id: int, event_id: int) -> tuple[FirmEvent, FirmChannel]:
+    """Событие принадлежит фирме не напрямую, а через свой канал связи
+    (FirmEvent.channel_id -> FirmChannel.id) — проверяем оба условия разом и
+    заодно возвращаем уже загруженный FirmChannel, он всё равно понадобится
+    вызывающему коду (для channel_type/адреса в ответе)."""
+    event = session.get(FirmEvent, event_id)
+    if event is None:
+        raise HTTPException(status_code=404, detail="Событие не найдено.")
+    channel = session.get(FirmChannel, event.channel_id)
+    if channel is None or channel.firm_id != firm_id:
+        raise HTTPException(status_code=404, detail="Событие не найдено.")
+    return event, channel
 
 
 def _ensure_can_edit_firm(session: Session, firm: Firm, current_user: User) -> None:
@@ -545,3 +576,235 @@ def add_comment(
     return FirmCommentOut(
         id=comment.id, added=comment.added, author_fullname=current_user.fullname, comment=comment.comment
     )
+
+
+# --- Каналы связи фирмы (GET-страница /crm/firms/{id}/channels, см. views/crm/firm_channels.py) ---
+
+
+class FirmChannelIn(BaseModel):
+    channel_id: int
+    address: str = Field(..., min_length=1, max_length=500)
+    description: Optional[str] = Field(default=None, max_length=500)
+
+    @field_validator("address")
+    @classmethod
+    def strip_address(cls, value: str) -> str:
+        stripped = value.strip()
+        if not stripped:
+            raise ValueError("Адрес не может быть пустым.")
+        return stripped
+
+    @field_validator("description")
+    @classmethod
+    def strip_description(cls, value: Optional[str]) -> Optional[str]:
+        if value is None:
+            return None
+        stripped = value.strip()
+        return stripped or None
+
+
+class FirmChannelOut(BaseModel):
+    id: int
+    channel_id: int
+    channel_name: str
+    icon_url: str
+    address: str
+    description: Optional[str]
+    date_added: datetime
+
+
+def _to_firm_channel_out(channel: FirmChannel, channel_type: ChannelType) -> FirmChannelOut:
+    return FirmChannelOut(
+        id=channel.id,
+        channel_id=channel.channel_id,
+        channel_name=channel_type.name,
+        icon_url=channel_type.icon_url,
+        address=channel.address,
+        description=channel.description,
+        date_added=channel.date_added,
+    )
+
+
+@router.post("/{firm_id}/channels", response_model=FirmChannelOut, status_code=201)
+def add_firm_channel(
+    firm_id: int, payload: FirmChannelIn, request: Request, session: Session = Depends(get_session)
+) -> FirmChannelOut:
+    current_user = _require_authenticated(request, session)
+    firm = _get_firm_or_404(session, firm_id)
+    _ensure_can_edit_firm(session, firm, current_user)
+    channel_type = _get_channel_type_or_404(session, payload.channel_id)
+
+    channel = FirmChannel(
+        firm_id=firm_id,
+        channel_id=payload.channel_id,
+        address=payload.address,
+        description=payload.description,
+    )
+    session.add(channel)
+    try:
+        session.commit()
+    except IntegrityError:
+        session.rollback()
+        raise HTTPException(status_code=400, detail="Не удалось добавить канал связи.")
+    session.refresh(channel)
+
+    return _to_firm_channel_out(channel, channel_type)
+
+
+@router.patch("/{firm_id}/channels/{channel_row_id}", response_model=FirmChannelOut)
+def edit_firm_channel(
+    firm_id: int,
+    channel_row_id: int,
+    payload: FirmChannelIn,
+    request: Request,
+    session: Session = Depends(get_session),
+) -> FirmChannelOut:
+    current_user = _require_authenticated(request, session)
+    firm = _get_firm_or_404(session, firm_id)
+    _ensure_can_edit_firm(session, firm, current_user)
+    channel = _get_firm_channel_or_404(session, firm_id, channel_row_id)
+    channel_type = _get_channel_type_or_404(session, payload.channel_id)
+
+    channel.channel_id = payload.channel_id
+    channel.address = payload.address
+    channel.description = payload.description
+    session.add(channel)
+    try:
+        session.commit()
+    except IntegrityError:
+        session.rollback()
+        raise HTTPException(status_code=400, detail="Не удалось сохранить канал связи.")
+    session.refresh(channel)
+
+    return _to_firm_channel_out(channel, channel_type)
+
+
+@router.delete("/{firm_id}/channels/{channel_row_id}", status_code=204)
+def delete_firm_channel(
+    firm_id: int, channel_row_id: int, request: Request, session: Session = Depends(get_session)
+) -> None:
+    current_user = _require_authenticated(request, session)
+    firm = _get_firm_or_404(session, firm_id)
+    _ensure_can_edit_firm(session, firm, current_user)
+    channel = _get_firm_channel_or_404(session, firm_id, channel_row_id)
+
+    in_use = session.exec(select(FirmEvent).where(FirmEvent.channel_id == channel_row_id)).first()
+    if in_use is not None:
+        raise HTTPException(
+            status_code=400,
+            detail="Нельзя удалить канал связи — по нему есть события.",
+        )
+
+    session.delete(channel)
+    try:
+        session.commit()
+    except IntegrityError:
+        session.rollback()
+        raise HTTPException(
+            status_code=400,
+            detail="Нельзя удалить канал связи — по нему есть события.",
+        )
+
+
+# --- События по каналам связи фирмы (GET-страница /crm/firms/{id}/events, см.
+# views/crm/firm_events.py) — как и firm_comment, доступно любому авторизованному
+# пользователю (не только владельцу/админу фирмы, в отличие от firm_channel).
+# В отличие от firm_comment, здесь разрешена корректировка (PATCH), но не
+# удаление — по явному решению при постановке задачи. Автор события (user_id)
+# при редактировании не меняется — как и Task.author_id, это неизменное поле
+# записи, которое лишь корректируют, не переприсваивая.
+
+
+class FirmEventIn(BaseModel):
+    channel_id: int
+    description: str = Field(..., min_length=1, max_length=2000)
+
+    @field_validator("description")
+    @classmethod
+    def strip_description(cls, value: str) -> str:
+        stripped = value.strip()
+        if not stripped:
+            raise ValueError("Описание не может быть пустым.")
+        return stripped
+
+
+class FirmEventOut(BaseModel):
+    id: int
+    channel_id: int
+    channel_type_name: str
+    channel_address: str
+    created: datetime
+    user_id: int
+    author_fullname: str
+    description: str
+
+
+def _to_firm_event_out(
+    event: FirmEvent, channel: FirmChannel, channel_type: ChannelType, author: User
+) -> FirmEventOut:
+    return FirmEventOut(
+        id=event.id,
+        channel_id=event.channel_id,
+        channel_type_name=channel_type.name,
+        channel_address=channel.address,
+        created=event.created,
+        user_id=event.user_id,
+        author_fullname=author.fullname,
+        description=event.description,
+    )
+
+
+@router.post("/{firm_id}/events", response_model=FirmEventOut, status_code=201)
+def add_firm_event(
+    firm_id: int, payload: FirmEventIn, request: Request, session: Session = Depends(get_session)
+) -> FirmEventOut:
+    current_user = _require_authenticated(request, session)
+    _get_firm_or_404(session, firm_id)
+    # payload.channel_id — это firm_channel.id (конкретный канал этой фирмы), а
+    # не channel_type.id — переиспользуем тот же 404-хелпер, что и firm_channel
+    # само, он уже проверяет channel.firm_id == firm_id.
+    channel = _get_firm_channel_or_404(session, firm_id, payload.channel_id)
+    channel_type = _get_channel_type_or_404(session, channel.channel_id)
+
+    event = FirmEvent(
+        channel_id=payload.channel_id,
+        user_id=current_user.id,
+        description=payload.description,
+    )
+    session.add(event)
+    try:
+        session.commit()
+    except IntegrityError:
+        session.rollback()
+        raise HTTPException(status_code=400, detail="Не удалось добавить событие.")
+    session.refresh(event)
+
+    return _to_firm_event_out(event, channel, channel_type, current_user)
+
+
+@router.patch("/{firm_id}/events/{event_id}", response_model=FirmEventOut)
+def edit_firm_event(
+    firm_id: int,
+    event_id: int,
+    payload: FirmEventIn,
+    request: Request,
+    session: Session = Depends(get_session),
+) -> FirmEventOut:
+    _require_authenticated(request, session)
+    _get_firm_or_404(session, firm_id)
+    event, _old_channel = _get_firm_event_or_404(session, firm_id, event_id)
+    new_channel = _get_firm_channel_or_404(session, firm_id, payload.channel_id)
+    channel_type = _get_channel_type_or_404(session, new_channel.channel_id)
+
+    event.channel_id = payload.channel_id
+    event.description = payload.description
+    session.add(event)
+    try:
+        session.commit()
+    except IntegrityError:
+        session.rollback()
+        raise HTTPException(status_code=400, detail="Не удалось сохранить событие.")
+    session.refresh(event)
+
+    author = session.get(User, event.user_id)
+    return _to_firm_event_out(event, new_channel, channel_type, author)

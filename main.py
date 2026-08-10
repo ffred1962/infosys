@@ -18,6 +18,7 @@ from api.task_status import router as api_task_status_router
 from api.city import router as api_city_router
 from api.firm_type import router as api_firm_type_router
 from api.unit import router as api_unit_router
+from api.channel_type import router as api_channel_type_router
 from api.constants import router as api_constants_router
 from api.bug import router as api_bug_router
 from api.admin_bug import router as api_admin_bug_router
@@ -81,14 +82,17 @@ HOST = "127.0.0.1"
 PORT = 8000
 CSS_DIR = "CSS"
 JS_DIR = "js"
+PIC_DIR = "pic"
 app.mount("/CSS", StaticFiles(directory=str(CSS_DIR)), name="css")
 app.mount("/js", StaticFiles(directory=str(JS_DIR)), name="js")
+app.mount("/pic", StaticFiles(directory=str(PIC_DIR)), name="pic")
 
 app.include_router(api_router)
 app.include_router(api_task_status_router)
 app.include_router(api_city_router)
 app.include_router(api_firm_type_router)
 app.include_router(api_unit_router)
+app.include_router(api_channel_type_router)
 app.include_router(api_constants_router)
 app.include_router(api_bug_router)
 app.include_router(api_admin_bug_router)

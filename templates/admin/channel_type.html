@@ -1,0 +1,86 @@
+{% extends "base1.html" %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+  <h1 class="display-6 fw-semibold mb-0">Типы каналов</h1>
+</div>
+
+<div id="channeltypeError" class="alert alert-danger d-none" role="alert"></div>
+
+<div class="table-responsive mb-4">
+  <table class="table align-middle">
+    <thead class="table-primary">
+      <tr>
+        <th style="width: 48px;">Иконка</th>
+        <th>Название</th>
+        <th class="text-center" style="width: 90px;">Активен</th>
+        <th class="text-center" style="width: 90px;">Входящий</th>
+        <th class="text-center" style="width: 90px;">Исходящий</th>
+        <th>Путь к иконке</th>
+        <th style="width: 90px;" class="text-end">Действия</th>
+      </tr>
+    </thead>
+    <tbody id="channeltypeBody">
+      {% for ct in channel_types %}
+      <tr data-channel-type-id="{{ ct.id }}">
+        <td><img src="{{ ct.icon_url }}" alt="" class="channeltype-icon-preview" width="28" height="28"></td>
+        <td>
+          <input type="text" class="form-control form-control-sm channeltype-name-input" value="{{ ct.name }}" required>
+        </td>
+        <td class="text-center">
+          <input type="checkbox" class="form-check-input channeltype-active-input" {% if ct.is_active %}checked{% endif %}>
+        </td>
+        <td class="text-center">
+          <input type="checkbox" class="form-check-input channeltype-input-input" {% if ct.is_input %}checked{% endif %}>
+        </td>
+        <td class="text-center">
+          <input type="checkbox" class="form-check-input channeltype-output-input" {% if ct.is_output %}checked{% endif %}>
+        </td>
+        <td>
+          <input type="text" class="form-control form-control-sm channeltype-icon-input" value="{{ ct.icon_url }}" required>
+        </td>
+        <td class="text-end">
+          <div class="d-flex gap-1 justify-content-end">
+            <button type="button" class="btn btn-sm btn-outline-primary channeltype-save-btn" title="Сохранить" aria-label="Сохранить тип канала {{ ct.name }}">
+              <i class="bi bi-check-lg"></i>
+            </button>
+            <button type="button" class="btn btn-sm btn-outline-danger channeltype-delete-btn" title="Удалить" aria-label="Удалить тип канала {{ ct.name }}">
+              <i class="bi bi-trash"></i>
+            </button>
+          </div>
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+<h6 class="text-secondary text-uppercase small mb-2">Новый тип канала</h6>
+<div class="row g-2 align-items-center">
+  <div class="col-12 col-md-3">
+    <input type="text" id="channeltypeNewName" class="form-control form-control-sm" placeholder="Название" required>
+  </div>
+  <div class="col-6 col-md-2 d-flex align-items-center gap-1">
+    <input type="checkbox" id="channeltypeNewActive" class="form-check-input" checked>
+    <label for="channeltypeNewActive" class="form-check-label small">Активен</label>
+  </div>
+  <div class="col-6 col-md-2 d-flex align-items-center gap-1">
+    <input type="checkbox" id="channeltypeNewInput" class="form-check-input" checked>
+    <label for="channeltypeNewInput" class="form-check-label small">Входящий</label>
+  </div>
+  <div class="col-6 col-md-2 d-flex align-items-center gap-1">
+    <input type="checkbox" id="channeltypeNewOutput" class="form-check-input" checked>
+    <label for="channeltypeNewOutput" class="form-check-label small">Исходящий</label>
+  </div>
+  <div class="col-12 col-md-3">
+    <input type="text" id="channeltypeNewIcon" class="form-control form-control-sm" placeholder="/pic/icon.svg" required>
+  </div>
+  <div class="col-12 col-md-auto">
+    <button type="button" id="channeltypeAddBtn" class="btn btn-sm btn-outline-success" title="Добавить" aria-label="Добавить тип канала">
+      <i class="bi bi-plus-lg"></i> Добавить
+    </button>
+  </div>
+</div>
+
+<script src="/js/channel_type.js"></script>
+{% endblock %}

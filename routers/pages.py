@@ -13,14 +13,18 @@ from views.crm.crm_page import crm_page
 from views.crm.tasks import tasks_page
 from views.crm.firm_finder import firm_finder_page
 from views.crm.firms import firms_page
+from views.crm.events import events_page
 from views.crm.firm_prices import firm_prices_page
 from views.crm.firm_comments import firm_comments_page
+from views.crm.firm_channels import firm_channels_page
+from views.crm.firm_events import firm_events_page
 from views.admin.admin_page import admin_page
 from views.admin.usermgt import new_user_form, usermgt_page
 from views.admin.taskstatus import taskstatus_page
 from views.admin.city import city_page
 from views.admin.firm_type import firm_type_page
 from views.admin.unit import unit_page
+from views.admin.channel_type import channel_type_page
 from views.admin.constants import constants_page
 from views.admin.bugs import bugs_page
 from views.admin.notifications import notifications_page
@@ -51,8 +55,11 @@ PAGE_ROUTES = [
     PageRoute("/crm/tasks", tasks_page, "crm_tasks_page"),
     PageRoute("/crm/firm_finder", firm_finder_page, "crm_firm_finder_page"),
     PageRoute("/crm/firms", firms_page, "crm_firms_page"),
+    PageRoute("/crm/events", events_page, "crm_events_page"),
     PageRoute("/crm/firms/{firm_id}/prices", firm_prices_page, "crm_firm_prices_page"),
     PageRoute("/crm/firms/{firm_id}/comments", firm_comments_page, "crm_firm_comments_page"),
+    PageRoute("/crm/firms/{firm_id}/channels", firm_channels_page, "crm_firm_channels_page"),
+    PageRoute("/crm/firms/{firm_id}/events", firm_events_page, "crm_firm_events_page"),
     PageRoute("/admin", admin_page, "admin_page"),
     PageRoute("/admin/usermgt", usermgt_page, "admin_usermgt_page"),
     PageRoute("/admin/usermgt/new", new_user_form, "admin_usermgt_new_page"),
@@ -60,6 +67,7 @@ PAGE_ROUTES = [
     PageRoute("/admin/city", city_page, "admin_city_page"),
     PageRoute("/admin/firmtype", firm_type_page, "admin_firmtype_page"),
     PageRoute("/admin/unit", unit_page, "admin_unit_page"),
+    PageRoute("/admin/channeltype", channel_type_page, "admin_channeltype_page"),
     PageRoute("/admin/constants", constants_page, "admin_constants_page"),
     PageRoute("/admin/bugs", bugs_page, "admin_bugs_page"),
     PageRoute("/admin/notifications", notifications_page, "admin_notifications_page"),

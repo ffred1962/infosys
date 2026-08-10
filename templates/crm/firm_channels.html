@@ -1,0 +1,91 @@
+{% extends "base1.html" %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+  <div>
+    <h1 class="display-6 fw-semibold mb-0">Каналы связи: {{ firm.name }}</h1>
+  </div>
+  <a href="{{ close_url }}" class="btn btn-outline-secondary btn-sm" title="Закрыть" aria-label="Закрыть">
+    <i class="bi bi-x-lg"></i>
+  </a>
+</div>
+
+<div id="firmChannelError" class="alert alert-danger d-none" role="alert"></div>
+
+<div class="table-responsive mb-4">
+  <table class="table align-middle">
+    <thead class="table-primary">
+      <tr>
+        <th style="width: 40px;">Иконка</th>
+        <th>Адрес</th>
+        <th>Описание</th>
+        <th style="width: 160px;">Добавлен</th>
+        {% if can_edit %}
+        <th style="width: 90px;" class="text-end">Действия</th>
+        {% endif %}
+      </tr>
+    </thead>
+    <tbody id="firmChannelBody" data-firm-id="{{ firm.id }}" data-can-edit="{{ 'true' if can_edit else 'false' }}">
+      {% for row in channels %}
+      <tr data-channel-row-id="{{ row.channel.id }}" data-channel-type-id="{{ row.channel.channel_id }}">
+        <td><img src="{{ row.channel_type.icon_url }}" alt="{{ row.channel_type.name }}" title="{{ row.channel_type.name }}" width="24" height="24"></td>
+        {% if can_edit %}
+        <td><input type="text" class="form-control form-control-sm firm-channel-address-input" value="{{ row.channel.address }}" required></td>
+        <td><input type="text" class="form-control form-control-sm firm-channel-description-input" value="{{ row.channel.description or '' }}"></td>
+        <td>{{ row.channel.date_added.strftime("%Y-%m-%d %H:%M") }}</td>
+        <td class="text-end">
+          <div class="d-flex gap-1 justify-content-end">
+            <button type="button" class="btn btn-sm btn-outline-primary firm-channel-save-btn" title="Сохранить" aria-label="Сохранить канал связи">
+              <i class="bi bi-check-lg"></i>
+            </button>
+            <button type="button" class="btn btn-sm btn-outline-danger firm-channel-delete-btn" title="Удалить" aria-label="Удалить канал связи">
+              <i class="bi bi-trash"></i>
+            </button>
+          </div>
+        </td>
+        {% else %}
+        <td>{{ row.channel.address }}</td>
+        <td>{{ row.channel.description or "—" }}</td>
+        <td>{{ row.channel.date_added.strftime("%Y-%m-%d %H:%M") }}</td>
+        {% endif %}
+      </tr>
+      {% else %}
+      <tr>
+        <td colspan="{{ 5 if can_edit else 4 }}" class="text-center text-secondary">Каналов связи пока нет.</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+{% if can_edit %}
+<h6 class="text-secondary text-uppercase small mb-2">Новый канал связи</h6>
+<div class="row g-2 align-items-center">
+  <div class="col-12 col-md-3">
+    <select id="firmChannelNewType" class="form-select form-select-sm">
+      {% for ct in active_channel_types %}
+      <option value="{{ ct.id }}">{{ ct.name }}</option>
+      {% endfor %}
+    </select>
+  </div>
+  <div class="col-12 col-md-3">
+    <input type="text" id="firmChannelNewAddress" class="form-control form-control-sm" placeholder="Адрес" required>
+  </div>
+  <div class="col-12 col-md-3">
+    <input type="text" id="firmChannelNewDescription" class="form-control form-control-sm" placeholder="Описание (необязательно)">
+  </div>
+  <div class="col-12 col-md-auto">
+    <button type="button" id="firmChannelAddBtn" class="btn btn-sm btn-outline-success" title="Добавить" aria-label="Добавить канал связи">
+      <i class="bi bi-plus-lg"></i> Добавить
+    </button>
+  </div>
+</div>
+{% if not active_channel_types %}
+<p class="text-secondary small mt-2">Нет активных типов каналов — добавьте их в <a href="/admin/channeltype">админке</a>.</p>
+{% endif %}
+{% endif %}
+{% endblock %}
+
+{% block scripts %}
+<script src="/js/firm_channels.js"></script>
+{% endblock %}

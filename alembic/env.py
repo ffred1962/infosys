@@ -37,6 +37,9 @@ import models.firm_price
 import models.firm_price_body
 import models.login_info
 import models.firm_comment
+import models.channel_type
+import models.firm_channel
+import models.firm_event
 
 from alembic import context
 from db.database import DB_URL

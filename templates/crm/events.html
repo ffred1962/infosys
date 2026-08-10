@@ -1,0 +1,113 @@
+{% extends "base1.html" %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+  <div>
+    <h1 class="display-6 fw-semibold mb-0">События</h1>
+    <p class="text-secondary mb-0">Всего: {{ total }}</p>
+  </div>
+</div>
+
+<div id="eventsError" class="alert alert-danger d-none" role="alert"></div>
+
+<div class="table-responsive mb-4">
+  <table class="table align-middle">
+    <thead class="table-primary">
+      <tr>
+        <th>Фирма</th>
+        <th>Город</th>
+        <th style="width: 240px;">Канал связи</th>
+        <th style="width: 150px;">Дата</th>
+        <th style="width: 180px;">Автор</th>
+        <th>Описание</th>
+        <th style="width: 60px;" class="text-end">Действия</th>
+      </tr>
+    </thead>
+    <tbody id="eventsBody">
+      {% for row in events %}
+      <tr data-event-row-id="{{ row.event.id }}" data-firm-id="{{ row.firm.id }}">
+        <td>{{ row.firm.name }}</td>
+        <td>{{ row.city.name }}</td>
+        <td>
+          <select class="form-select form-select-sm event-channel-select">
+            {% for ch in row.firm_channels %}
+            <option value="{{ ch.id }}" {% if ch.id == row.event.channel_id %}selected{% endif %}>{{ ch.label }}</option>
+            {% endfor %}
+          </select>
+        </td>
+        <td>{{ row.event.created.strftime("%Y-%m-%d %H:%M") }}</td>
+        <td>{{ row.author.fullname }}</td>
+        <td><input type="text" class="form-control form-control-sm event-description-input" value="{{ row.event.description }}" required></td>
+        <td class="text-end">
+          <button type="button" class="btn btn-sm btn-outline-primary event-save-btn" title="Сохранить" aria-label="Сохранить событие">
+            <i class="bi bi-check-lg"></i>
+          </button>
+        </td>
+      </tr>
+      {% else %}
+      <tr>
+        <td colspan="7" class="text-center text-secondary">Событий пока нет.</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+{% if total_pages > 1 %}
+<nav aria-label="Пагинация событий">
+  <ul class="pagination">
+    <li class="page-item {% if page <= 1 %}disabled{% endif %}">
+      {% if page <= 1 %}
+      <span class="page-link" aria-disabled="true">Предыдущая</span>
+      {% else %}
+      <a class="page-link" href="/crm/events?page={{ page - 1 }}">Предыдущая</a>
+      {% endif %}
+    </li>
+    <li class="page-item disabled"><span class="page-link">{{ page }} / {{ total_pages }}</span></li>
+    <li class="page-item {% if page >= total_pages %}disabled{% endif %}">
+      {% if page >= total_pages %}
+      <span class="page-link" aria-disabled="true">Следующая</span>
+      {% else %}
+      <a class="page-link" href="/crm/events?page={{ page + 1 }}">Следующая</a>
+      {% endif %}
+    </li>
+  </ul>
+</nav>
+{% endif %}
+
+{% if firms_with_channels %}
+<h6 class="text-secondary text-uppercase small mb-2">Новое событие</h6>
+<div class="row g-2 align-items-start">
+  <div class="col-12 col-md-3">
+    <select id="eventNewFirm" class="form-select form-select-sm">
+      <option value="">— выберите фирму —</option>
+      {% for f in firms_with_channels %}
+      <option value="{{ f.id }}">{{ f.label }}</option>
+      {% endfor %}
+    </select>
+  </div>
+  <div class="col-12 col-md-3">
+    <select id="eventNewChannel" class="form-select form-select-sm" disabled>
+      <option value="">— сначала выберите фирму —</option>
+    </select>
+  </div>
+  <div class="col-12 col-md-4">
+    <textarea id="eventNewDescription" class="form-control form-control-sm" rows="1" placeholder="Описание события"></textarea>
+  </div>
+  <div class="col-12 col-md-auto">
+    <button type="button" id="eventAddBtn" class="btn btn-sm btn-outline-success" title="Добавить" aria-label="Добавить событие">
+      <i class="bi bi-plus-lg"></i> Добавить
+    </button>
+  </div>
+</div>
+{% else %}
+<p class="text-secondary small">В системе пока нет ни одной фирмы.</p>
+{% endif %}
+{% endblock %}
+
+{% block scripts %}
+<script>
+  window.FIRMS_WITH_CHANNELS = {{ firms_with_channels|tojson }};
+</script>
+<script src="/js/events.js"></script>
+{% endblock %}
