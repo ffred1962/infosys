@@ -10,6 +10,7 @@
   <table class="table align-middle">
     <thead>
       <tr>
+        <th style="width: 60px;">ID</th>
         <th>Email</th>
         <th>Полное имя</th>
         <th class="text-center">Активен</th>
@@ -18,6 +19,7 @@
     <tbody>
       {% for u in users %}
       <tr>
+        <td>{{ u.id }}</td>
         <td>
           <button type="button" class="btn btn-link p-0 user-email-link" data-user-id="{{ u.id }}" data-email="{{ u.email }}">
             {{ u.email }}
@@ -53,6 +55,7 @@
   <div class="alert alert-danger d-none user-card-error" role="alert"></div>
 
   {% set reopened_with_edit_error = open_user_id == u.id|string and open_user_email is not none %}
+  <p class="text-secondary small mb-3">ID: {{ u.id }}</p>
   <h6 class="text-secondary text-uppercase small mb-2">Данные</h6>
   <!-- Кнопка "Сохранить" физически расположена ниже, перед блоком "Безопасность"
        (просьба пользователя), но остаётся частью ЭТОЙ формы через form="edit-form-{{u.id}}" —
