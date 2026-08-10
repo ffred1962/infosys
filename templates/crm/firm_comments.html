@@ -1,0 +1,51 @@
+{% extends "base1.html" %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+  <div>
+    <h1 class="display-6 fw-semibold mb-0">Примечания: {{ firm.name }}</h1>
+  </div>
+  <a href="{{ close_url }}" class="btn btn-outline-secondary btn-sm" title="Закрыть" aria-label="Закрыть">
+    <i class="bi bi-x-lg"></i>
+  </a>
+</div>
+
+<div id="firmCommentError" class="alert alert-danger d-none" role="alert"></div>
+
+<form id="firmCommentForm" class="mb-4" data-firm-id="{{ firm.id }}">
+  <div class="mb-2">
+    <label for="firmCommentText" class="form-label">Новое примечание</label>
+    <textarea id="firmCommentText" class="form-control" rows="3" maxlength="2000" required></textarea>
+  </div>
+  <button type="submit" class="btn btn-primary btn-sm" id="firmCommentSubmitBtn">Добавить</button>
+</form>
+
+<div class="table-responsive">
+  <table class="table align-middle">
+    <thead class="table-primary">
+      <tr>
+        <th style="width: 160px;">Дата</th>
+        <th style="width: 220px;">Автор</th>
+        <th>Примечание</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for row in comments %}
+      <tr>
+        <td>{{ row.comment.added.strftime("%Y-%m-%d %H:%M") }}</td>
+        <td>{{ row.author_fullname }}</td>
+        <td class="text-break">{{ row.comment.comment }}</td>
+      </tr>
+      {% else %}
+      <tr>
+        <td colspan="3" class="text-center text-secondary">Примечаний пока нет.</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="/js/firm_comments.js"></script>
+{% endblock %}

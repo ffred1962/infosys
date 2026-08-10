@@ -252,6 +252,7 @@ def list_firms_tool(
                 "phone": f.phone,
                 "website": f.website,
                 "address": f.address,
+                "rating": f.rating,
             }
             for f, city_name, type_name in rows
         ]

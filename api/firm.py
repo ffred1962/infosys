@@ -20,6 +20,7 @@ from core.firm_search import FirmSearchError, search_firms
 from db.database import get_session
 from models.city import City
 from models.firm import Firm
+from models.firm_comment import FirmComment
 from models.firm_goods import FirmGoods
 from models.firm_price import FirmPrice
 from models.firm_price_body import FirmPriceBody
@@ -218,6 +219,25 @@ class FirmPriceDownloadOut(BaseModel):
     item_count: int
 
 
+class FirmCommentIn(BaseModel):
+    comment: str = Field(..., min_length=1, max_length=2000)
+
+    @field_validator("comment")
+    @classmethod
+    def strip_comment(cls, value: str) -> str:
+        stripped = value.strip()
+        if not stripped:
+            raise ValueError("Примечание не может быть пустым.")
+        return stripped
+
+
+class FirmCommentOut(BaseModel):
+    id: int
+    added: datetime
+    author_fullname: str
+    comment: str
+
+
 class FirmSearchIn(BaseModel):
     city_id: int
     type_id: int
@@ -232,6 +252,7 @@ class FirmMutateMixin(BaseModel):
     address: Optional[str] = Field(default=None, max_length=500)
     source: Optional[str] = Field(default=None, max_length=200)
     notes: Optional[str] = Field(default=None, max_length=2000)
+    rating: int = Field(default=5, ge=0, le=10)
 
     @field_validator("name")
     @classmethod
@@ -268,6 +289,7 @@ class FirmOut(BaseModel):
     address: Optional[str]
     source: Optional[str]
     notes: Optional[str]
+    rating: int
 
 
 def _to_firm_out(firm: Firm) -> FirmOut:
@@ -281,6 +303,7 @@ def _to_firm_out(firm: Firm) -> FirmOut:
         address=firm.address,
         source=firm.source,
         notes=firm.notes,
+        rating=firm.rating,
     )
 
 
@@ -350,6 +373,7 @@ def create_firm(
         address=payload.address,
         source=payload.source,
         notes=payload.notes,
+        rating=payload.rating,
     )
     session.add(firm)
     try:
@@ -380,6 +404,7 @@ def edit_firm(
     firm.address = payload.address
     firm.source = payload.source
     firm.notes = payload.notes
+    firm.rating = payload.rating
     session.add(firm)
     try:
         session.commit()
@@ -496,3 +521,27 @@ async def download_price(
     session.refresh(price)
 
     return FirmPriceDownloadOut(price_id=price.id, created=price.created, item_count=len(body_rows))
+
+
+# --- Примечания к фирме (GET-страница /crm/firms/{id}/comments, см. views/crm/firm_comments.py) ---
+
+
+@router.post("/{firm_id}/comments", response_model=FirmCommentOut, status_code=201)
+def add_comment(
+    firm_id: int, payload: FirmCommentIn, request: Request, session: Session = Depends(get_session)
+) -> FirmCommentOut:
+    """Добавление примечания — любым авторизованным пользователем (не только
+    владельцем/админом фирмы, как _ensure_can_edit_firm для самой карточки —
+    примечания это отдельный, более открытый журнал). Записи неизменяемы —
+    ни PATCH, ни DELETE для firm_comment не предусмотрены."""
+    current_user = _require_authenticated(request, session)
+    _get_firm_or_404(session, firm_id)
+
+    comment = FirmComment(firm_id=firm_id, user_id=current_user.id, comment=payload.comment)
+    session.add(comment)
+    session.commit()
+    session.refresh(comment)
+
+    return FirmCommentOut(
+        id=comment.id, added=comment.added, author_fullname=current_user.fullname, comment=comment.comment
+    )

@@ -54,6 +54,7 @@
   <table class="table align-middle">
     <thead class="table-primary">
       <tr>
+        <th>Рейтинг</th>
         <th>Название</th>
         <th>Город</th>
         <th>Тип</th>
@@ -68,6 +69,7 @@
     <tbody>
       {% for row in firms %}
       <tr>
+        <td>{{ row.firm.rating }}</td>
         <td>
           <button type="button" class="btn btn-link p-0 text-start firm-name-link"
             data-id="{{ row.firm.id }}"
@@ -79,6 +81,8 @@
             data-address="{{ row.firm.address or '' }}"
             data-source="{{ row.firm.source or '' }}"
             data-notes="{{ row.firm.notes or '' }}"
+            data-rating="{{ row.firm.rating }}"
+            data-creation-date="{{ row.firm.creation_date.strftime('%Y-%m-%d %H:%M') }}"
             data-can-edit="{{ 'true' if row.can_edit else 'false' }}">{{ row.firm.name }}</button>
         </td>
         <td>{{ row.city_name }}</td>
@@ -98,7 +102,7 @@
       </tr>
       {% else %}
       <tr>
-        <td colspan="9" class="text-center text-secondary">Ничего не найдено.</td>
+        <td colspan="10" class="text-center text-secondary">Ничего не найдено.</td>
       </tr>
       {% endfor %}
     </tbody>
@@ -151,11 +155,15 @@
         <a id="firmModalPricesLink" href="#" class="btn btn-outline-secondary btn-sm ms-auto me-2 d-none">
           <i class="bi bi-cash-stack"></i> Прайсы
         </a>
+        <a id="firmModalCommentsLink" href="#" class="btn btn-outline-secondary btn-sm me-2 d-none">
+          <i class="bi bi-chat-left-text"></i> Примечания
+        </a>
         <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Закрыть"></button>
       </div>
       <div class="modal-body">
         <div id="firmModalError" class="alert alert-danger d-none" role="alert"></div>
         <input type="hidden" id="firmModalId">
+        <p id="firmModalCreationDate" class="text-secondary small mb-3 d-none"></p>
         <div class="mb-3">
           <label for="firmModalName" class="form-label">Название</label>
           <input type="text" id="firmModalName" class="form-control">
@@ -199,6 +207,10 @@
         <div class="mb-3">
           <label for="firmModalNotes" class="form-label">Примечание</label>
           <textarea id="firmModalNotes" class="form-control" rows="2"></textarea>
+        </div>
+        <div class="mb-3">
+          <label for="firmModalRating" class="form-label">Рейтинг (0–10)</label>
+          <input type="number" id="firmModalRating" class="form-control" min="0" max="10" step="1">
         </div>
       </div>
       <div class="modal-footer">

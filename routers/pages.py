@@ -14,6 +14,7 @@ from views.crm.tasks import tasks_page
 from views.crm.firm_finder import firm_finder_page
 from views.crm.firms import firms_page
 from views.crm.firm_prices import firm_prices_page
+from views.crm.firm_comments import firm_comments_page
 from views.admin.admin_page import admin_page
 from views.admin.usermgt import new_user_form, usermgt_page
 from views.admin.taskstatus import taskstatus_page
@@ -51,6 +52,7 @@ PAGE_ROUTES = [
     PageRoute("/crm/firm_finder", firm_finder_page, "crm_firm_finder_page"),
     PageRoute("/crm/firms", firms_page, "crm_firms_page"),
     PageRoute("/crm/firms/{firm_id}/prices", firm_prices_page, "crm_firm_prices_page"),
+    PageRoute("/crm/firms/{firm_id}/comments", firm_comments_page, "crm_firm_comments_page"),
     PageRoute("/admin", admin_page, "admin_page"),
     PageRoute("/admin/usermgt", usermgt_page, "admin_usermgt_page"),
     PageRoute("/admin/usermgt/new", new_user_form, "admin_usermgt_new_page"),

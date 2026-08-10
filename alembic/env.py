@@ -36,6 +36,7 @@ import models.firm_goods
 import models.firm_price
 import models.firm_price_body
 import models.login_info
+import models.firm_comment
 
 from alembic import context
 from db.database import DB_URL

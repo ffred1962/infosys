@@ -13,8 +13,10 @@ if (firmModalEl) {
   const modalLabel = document.getElementById("firmModalLabel");
   const saveBtn = document.getElementById("firmModalSaveBtn");
   const pricesLink = document.getElementById("firmModalPricesLink");
+  const commentsLink = document.getElementById("firmModalCommentsLink");
 
   const idInput = document.getElementById("firmModalId");
+  const creationDateEl = document.getElementById("firmModalCreationDate");
   const nameInput = document.getElementById("firmModalName");
   const citySelect = document.getElementById("firmModalCity");
   const typeSelect = document.getElementById("firmModalType");
@@ -23,8 +25,9 @@ if (firmModalEl) {
   const addressInput = document.getElementById("firmModalAddress");
   const sourceInput = document.getElementById("firmModalSource");
   const notesInput = document.getElementById("firmModalNotes");
+  const ratingInput = document.getElementById("firmModalRating");
 
-  const formFields = [nameInput, citySelect, typeSelect, phoneInput, websiteInput, addressInput, sourceInput, notesInput];
+  const formFields = [nameInput, citySelect, typeSelect, phoneInput, websiteInput, addressInput, sourceInput, notesInput, ratingInput];
 
   function formatErrorDetail(detail) {
     if (Array.isArray(detail)) {
@@ -70,6 +73,7 @@ if (firmModalEl) {
     addressInput.value = "";
     sourceInput.value = "";
     notesInput.value = "";
+    ratingInput.value = "5";
   }
 
   function openCreateModal() {
@@ -77,7 +81,10 @@ if (firmModalEl) {
     resetFields();
     setFieldsEnabled(true);
     modalLabel.textContent = "Новая фирма";
+    // Даты создания у ещё не сохранённой фирмы просто нет.
+    creationDateEl.classList.add("d-none");
     pricesLink.classList.add("d-none");
+    commentsLink.classList.add("d-none");
     firmModal.show();
   }
 
@@ -92,6 +99,10 @@ if (firmModalEl) {
     addressInput.value = link.dataset.address;
     sourceInput.value = link.dataset.source;
     notesInput.value = link.dataset.notes;
+    ratingInput.value = link.dataset.rating;
+    // Только для чтения — не форм-поле, никогда не входит в payload сохранения.
+    creationDateEl.textContent = `Добавлена: ${link.dataset.creationDate}`;
+    creationDateEl.classList.remove("d-none");
 
     const canEdit = link.dataset.canEdit === "true";
     setFieldsEnabled(canEdit);
@@ -99,6 +110,8 @@ if (firmModalEl) {
     const returnTo = window.location.pathname + window.location.search;
     pricesLink.href = `/crm/firms/${link.dataset.id}/prices?return_to=${encodeURIComponent(returnTo)}`;
     pricesLink.classList.remove("d-none");
+    commentsLink.href = `/crm/firms/${link.dataset.id}/comments?return_to=${encodeURIComponent(returnTo)}`;
+    commentsLink.classList.remove("d-none");
     firmModal.show();
   }
 
@@ -137,6 +150,11 @@ if (firmModalEl) {
       showModalError("Выберите город и тип фирмы.");
       return;
     }
+    const rating = Number(ratingInput.value);
+    if (!Number.isInteger(rating) || rating < 0 || rating > 10) {
+      showModalError("Рейтинг должен быть целым числом от 0 до 10.");
+      return;
+    }
 
     const payload = {
       city_id: Number(citySelect.value),
@@ -147,6 +165,7 @@ if (firmModalEl) {
       address: addressInput.value.trim() || null,
       source: sourceInput.value.trim() || null,
       notes: notesInput.value.trim() || null,
+      rating,
     };
 
     const firmId = idInput.value;

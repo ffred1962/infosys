@@ -25,3 +25,8 @@ class Firm(SQLModel, table=True):
     address: Optional[str] = None
     source: Optional[str] = None
     notes: Optional[str] = None
+    # Диапазон 0-10 проверяется на уровне API (Pydantic ge/le в FirmMutateMixin,
+    # api/firm.py), не CHECK-constraint'ом в БД — тот же подход, что и у прочих
+    # проверок в этом проекте (например due_date у Task). server_default нужен,
+    # чтобы ALTER TABLE на уже заполненной таблице firm не упал на NOT NULL.
+    rating: int = Field(default=5, index=True, sa_column_kwargs={"server_default": "5"})
