@@ -60,6 +60,7 @@ list_my_tasks — тот же запрос, что строит /crm/tasks (view
 
 import logging
 import os
+from datetime import datetime
 from typing import Optional
 
 from mcp.server.auth.middleware.auth_context import get_access_token
@@ -71,6 +72,7 @@ from sqlmodel import Session, select
 from starlette.requests import Request
 from starlette.responses import PlainTextResponse, RedirectResponse, Response
 
+from api.firm import FirmPriceDownloadOut, _persist_price_items, _prepare_price_items
 from api.plus import PlusRequest
 from api.plus import plus as plus_endpoint
 from core.auth import resolve_authenticated_access, user_has_role
@@ -78,6 +80,7 @@ from core.firm_search import FirmSearchError, search_firms
 from core.mcp_oauth import oauth_provider, resolve_user_by_subject
 from db.database import engine
 from models.city import City
+from models.constants import Constant
 from models.firm import Firm
 from models.firm_type import FirmType
 from models.task import Task
@@ -99,9 +102,12 @@ mcp = FastMCP(
     "InfoSys",
     instructions=(
         "Инструменты для CRM InfoSys: поиск и просмотр фирм, просмотр своих задач, "
-        "сложение чисел для проверки связи. Каждый вызов выполняется от имени того "
-        "InfoSys-пользователя, который прошёл OAuth-авторизацию в браузере при "
-        "подключении этого коннектора."
+        "сложение чисел для проверки связи, а также очередь заданий для ИИ "
+        "(list_ai_tasks/submit_firm_price_items/complete_ai_task) — задачи, "
+        "назначенные на служебного пользователя AI_USER_ID (см. /admin/constants), "
+        "предназначены для выполнения этим самым коннектором. Каждый вызов "
+        "выполняется от имени того InfoSys-пользователя, который прошёл "
+        "OAuth-авторизацию в браузере при подключении этого коннектора."
     ),
     auth_server_provider=oauth_provider,
     auth=AuthSettings(
@@ -306,6 +312,166 @@ def list_my_tasks(role: str = "assignee") -> list[dict]:
             }
             for t, other_name, status_name in rows
         ]
+    finally:
+        session.close()
+
+
+# --- Очередь заданий для внешнего Claude Code (см. обсуждение с пользователем):
+# любой человек ставит обычную Task, назначая исполнителем служебного
+# "ИИ"-пользователя (его id хранится в constants.AI_USER_ID, настраивается
+# через /admin/constants, без изменений кода) — а внешний Claude Code,
+# подключённый к этому мосту по MCP (с любого InfoSys-аккаунта, не обязательно
+# от имени самого AI_USER_ID), читает эту очередь через list_ai_tasks и решает
+# задачи сам, своими штатными средствами (веб-поиск/фетч), не тратя
+# оплачиваемые вызовы Anthropic API, которые тратит core/firm_price_download.py.
+# Результат скачивания прайса кладётся через submit_firm_price_items, а сама
+# задача закрывается через complete_ai_task.
+
+
+def _get_ai_user_id(session: Session) -> int:
+    """Читает id "ИИ"-пользователя из constants.AI_USER_ID. Это единственная
+    точка привязки очереди заданий к конкретному User — если константа не
+    задана или битая, все инструменты очереди ниже явно скажут, что делать."""
+    const = session.exec(select(Constant).where(Constant.name == "AI_USER_ID")).first()
+    if const is None:
+        raise ValueError(
+            "Константа AI_USER_ID не задана — добавьте её в /admin/constants "
+            "(значение = id пользователя, на которого назначаются задачи для ИИ)."
+        )
+    try:
+        ai_user_id = int(const.value)
+    except ValueError:
+        raise ValueError(f"Константа AI_USER_ID содержит не число: {const.value!r}")
+    if session.get(User, ai_user_id) is None:
+        raise ValueError(f"Пользователь с id={ai_user_id} (из константы AI_USER_ID) не найден.")
+    return ai_user_id
+
+
+@mcp.tool()
+def list_ai_tasks() -> list[dict]:
+    """
+    Список незавершённых задач, назначенных на служебного "ИИ"-пользователя
+    (см. константу AI_USER_ID в /admin/constants) — это и есть очередь заданий
+    для автоматизации. В отличие от list_my_tasks (которая смотрит на самого
+    вызывающего), эта смотрит на AI_USER_ID независимо от того, под каким
+    InfoSys-аккаунтом сейчас подключён коннектор. title/description задачи
+    описывают, что нужно сделать (например "Скачать прайс: ООО Ромашка") —
+    для конкретной фирмы используйте list_firms_tool/list_cities_and_types,
+    чтобы найти её id по названию из текста задачи.
+    """
+    session, _ = _current_session_and_user()
+    try:
+        ai_user_id = _get_ai_user_id(session)
+        rows = session.exec(
+            select(Task, User.fullname, TaskStatus.name)
+            .join(User, User.id == Task.author_id)
+            .join(TaskStatus, TaskStatus.id == Task.status_id)
+            .where(Task.assignee_id == ai_user_id, Task.completed.is_(False))
+            .order_by(Task.due_date)
+        ).all()
+        return [
+            {
+                "id": t.id,
+                "title": t.title,
+                "description": t.description,
+                "due_date": str(t.due_date),
+                "status": status_name,
+                "author": author_name,
+            }
+            for t, author_name, status_name in rows
+        ]
+    finally:
+        session.close()
+
+
+MAX_SUBMIT_PRICE_ITEMS = 200
+
+
+@mcp.tool()
+def submit_firm_price_items(firm_id: int, items: list[dict], note: Optional[str] = None) -> dict:
+    """
+    Сохраняет прайс-лист фирмы, уже найденный и разобранный самим вызывающим
+    (например Claude Code, скачавшим и прочитавшим сайт фирмы своими штатными
+    средствами) — парная операция к кнопке "Скачать прайс" на
+    /crm/firms/{id}/prices, но без платного похода в Anthropic API: сам шаг
+    извлечения данных уже сделан снаружи, этот инструмент только сохраняет
+    результат. items — список товаров (не более MAX_SUBMIT_PRICE_ITEMS штук за
+    вызов), каждый в виде {"name": str (обязательно, непустая строка),
+    "article": str|null, "unit": str|null, "price": str|число} (article/unit
+    можно не указывать — будут доопределены так же, как при обычном скачивании:
+    артикул — по началу названия или транслитерацией, единица — по словарю
+    синонимов, по умолчанию "шт"; price принимает и строку с валютой/
+    разделителями тысяч). Создаёт новую запись firm_price (дата — сегодня) и
+    связанные/переиспользованные firm_goods + firm_price_body, та же логика,
+    что и у обычного скачивания. Доступно любому авторизованному пользователю,
+    без ограничения владельцем фирмы — как и остальные инструменты работы с
+    фирмами в этом мосту.
+    """
+    session, user = _current_session_and_user()
+    try:
+        firm = session.get(Firm, firm_id)
+        if firm is None:
+            raise ValueError(f"Фирма с id={firm_id} не найдена.")
+
+        # Явная валидация формы items перед _prepare_price_items() — та функция
+        # написана для внутреннего, уже гарантированно правильного формата
+        # (ответ core.firm_price_download, см. api/firm.py), и на "item['name']"
+        # без проверки наличия ключа падает необработанным KeyError. Здесь же
+        # items приходит от внешнего вызывающего (стороннего Claude Code) —
+        # ошибка должна быть понятной, а не голым "'name'".
+        if not isinstance(items, list) or not items:
+            raise ValueError('items должен быть непустым списком объектов вида {"name": ..., "price": ...}.')
+        if len(items) > MAX_SUBMIT_PRICE_ITEMS:
+            raise ValueError(
+                f"Слишком много товаров за один вызов ({len(items)}, максимум {MAX_SUBMIT_PRICE_ITEMS}) "
+                "— разбейте на несколько вызовов."
+            )
+        for item in items:
+            if not isinstance(item, dict) or not isinstance(item.get("name"), str) or not item["name"].strip():
+                raise ValueError('Каждый элемент items должен быть объектом с непустой строкой "name".')
+
+        prepared = _prepare_price_items(items)
+        if not prepared:
+            raise ValueError("Не найдено ни одного валидного товара с ценой в переданных items.")
+
+        rem = note or f"Загружено ИИ-агентом (Claude Code) от имени {user.email}"
+        result: FirmPriceDownloadOut = _persist_price_items(session, firm, prepared, rem)
+        return {"price_id": result.price_id, "created": str(result.created), "item_count": result.item_count}
+    finally:
+        session.close()
+
+
+@mcp.tool()
+def complete_ai_task(task_id: int, status: Optional[str] = None) -> dict:
+    """
+    Закрывает задачу, назначенную на служебного "ИИ"-пользователя (AI_USER_ID) —
+    ставит completed=True и date_finished=сейчас. Это осознанное исключение из
+    обычного правила проекта "закрыть задачу может только автор" (см.
+    api/task.py) — распространяется ТОЛЬКО на задачи, где
+    assignee_id == AI_USER_ID; на любые другие задачи (в т.ч. свои собственные
+    у вызывающего) этот инструмент не действует. status (необязательно) —
+    точное название статуса из справочника TaskStatus (например "выполнена"),
+    если нужно заодно сменить и его — обычно это делает исполнитель через
+    PATCH /api/task/{id}/status, но здесь для простоты можно одним вызовом.
+    """
+    session, _ = _current_session_and_user()
+    try:
+        ai_user_id = _get_ai_user_id(session)
+        task = session.get(Task, task_id)
+        if task is None or task.assignee_id != ai_user_id:
+            raise ValueError(f"Задача id={task_id}, назначенная на AI_USER_ID, не найдена.")
+
+        if status is not None:
+            status_row = session.exec(select(TaskStatus).where(TaskStatus.name == status)).first()
+            if status_row is None:
+                raise ValueError(f"Статус задачи не найден в справочнике TaskStatus: {status!r}")
+            task.status_id = status_row.id
+
+        task.completed = True
+        task.date_finished = datetime.utcnow()
+        session.add(task)
+        session.commit()
+        return {"id": task.id, "completed": task.completed, "date_finished": str(task.date_finished)}
     finally:
         session.close()
 

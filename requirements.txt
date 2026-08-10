@@ -9,5 +9,5 @@ itsdangerous
 anthropic
 python-dotenv
 beautifulsoup4
-mcp
+mcp==1.28.1
 psycopg2-binary

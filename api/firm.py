@@ -447,44 +447,28 @@ def edit_firm(
     return _to_firm_out(firm)
 
 
-@router.post("/{firm_id}/download_price", response_model=FirmPriceDownloadOut, status_code=201)
-async def download_price(
-    firm_id: int, request: Request, session: Session = Depends(get_session)
-) -> FirmPriceDownloadOut:
-    """Кнопка "Скачать прайс" на /crm/firms/{id}/prices — сами скачиваем сайт фирмы
-    (см. core/firm_price_download.py) и извлекаем актуальные цены на двери
-    (окна/балконы исключаются), создавая один новый firm_price (дата+примечание) и
-    связанные firm_goods/firm_price_body. Роут асинхронный (не sync def, как
-    остальные в этом файле) — download_firm_price теперь сама async: скачивание
-    страниц идёт через httpx.AsyncClient, а не через блокирующий синхронный вызов,
-    который держал бы воркер-поток FastAPI занятым на всё время загрузки."""
-    _require_authenticated(request, session)
-    firm = _get_firm_or_404(session, firm_id)
+def _persist_price_items(session: Session, firm: Firm, items: list[dict], rem: Optional[str]) -> FirmPriceDownloadOut:
+    """Записывает уже подготовленные (прошедшие _prepare_price_items) товары/цены
+    в firm_price/firm_goods/firm_price_body для данной фирмы. Вынесено в общую
+    функцию, т.к. с появлением MCP-инструмента submit_firm_price_items
+    (api/mcp_server.py) у этой логики два источника items: сам этот роут (после
+    core.firm_price_download.download_firm_price — оплаченный вызов AI) и
+    внешний Claude Code, подключённый по MCP, который извлекает те же данные
+    сам, своими штатными средствами (бесплатно в рамках подписки) и присылает
+    сюда уже готовый список — сама запись в БД (дедуп по названию, обработка
+    "одно название — несколько артикулов в одной партии", подбор единицы
+    измерения, откат при IntegrityError) в обоих случаях идентична.
 
-    website = (firm.website or "").strip()
-    if not website:
-        raise HTTPException(
-            status_code=400, detail="У фирмы не указан сайт — скачивание прайса недоступно."
-        )
-    if not website.startswith(("http://", "https://")):
-        raise HTTPException(status_code=400, detail="Некорректный адрес сайта фирмы.")
-
-    try:
-        raw_items = await download_firm_price(firm.name, website)
-    except FirmPriceDownloadError as exc:
-        logger.warning("Скачивание прайса не удалось (firm_id=%s): %s", firm_id, exc)
-        raise HTTPException(status_code=502, detail=str(exc)) from exc
-
-    items = _prepare_price_items(raw_items)
+    Поднимает обычные Python-исключения (ValueError/RuntimeError), а не
+    HTTPException — вызывающая сторона сама решает, во что их превращать (роут
+    ниже — в HTTPException с нужным статусом, MCP tool — просто даёт исключению
+    всплыть, как и остальные инструменты в api/mcp_server.py)."""
     if not items:
-        raise HTTPException(status_code=422, detail="На сайте не найдено актуальных цен на двери.")
+        raise ValueError("Список товаров пуст — нечего сохранять.")
 
     default_unit = session.exec(select(Unit).where(Unit.name == "шт")).first()
     if default_unit is None:
-        raise HTTPException(
-            status_code=500,
-            detail='Не найдена единица измерения по умолчанию ("шт") — обратитесь к администратору.',
-        )
+        raise RuntimeError('Не найдена единица измерения по умолчанию ("шт") — обратитесь к администратору.')
 
     # Переиспользование по названию — сквозная политика между разными скачиваниями
     # (одна и та же db-запись firm_goods, если название уже встречалось раньше).
@@ -494,11 +478,7 @@ async def download_price(
     }
     taken_articles_lower = {g.article.lower() for g in existing_goods.values()}
 
-    price = FirmPrice(
-        firm_id=firm.id,
-        created=datetime.utcnow().date(),
-        rem=f"Загружено автоматически с сайта {website}",
-    )
+    price = FirmPrice(firm_id=firm.id, created=datetime.utcnow().date(), rem=rem)
     session.add(price)
 
     # Внутри ОДНОГО скачивания название может повторяться с разными артикулами
@@ -548,10 +528,48 @@ async def download_price(
         session.commit()
     except IntegrityError:
         session.rollback()
-        raise HTTPException(status_code=500, detail="Не удалось сохранить скачанный прайс.")
+        raise RuntimeError("Не удалось сохранить скачанный прайс.")
     session.refresh(price)
 
     return FirmPriceDownloadOut(price_id=price.id, created=price.created, item_count=len(body_rows))
+
+
+@router.post("/{firm_id}/download_price", response_model=FirmPriceDownloadOut, status_code=201)
+async def download_price(
+    firm_id: int, request: Request, session: Session = Depends(get_session)
+) -> FirmPriceDownloadOut:
+    """Кнопка "Скачать прайс" на /crm/firms/{id}/prices — сами скачиваем сайт фирмы
+    (см. core/firm_price_download.py) и извлекаем актуальные цены на двери
+    (окна/балконы исключаются), создавая один новый firm_price (дата+примечание) и
+    связанные firm_goods/firm_price_body. Роут асинхронный (не sync def, как
+    остальные в этом файле) — download_firm_price теперь сама async: скачивание
+    страниц идёт через httpx.AsyncClient, а не через блокирующий синхронный вызов,
+    который держал бы воркер-поток FastAPI занятым на всё время загрузки."""
+    _require_authenticated(request, session)
+    firm = _get_firm_or_404(session, firm_id)
+
+    website = (firm.website or "").strip()
+    if not website:
+        raise HTTPException(
+            status_code=400, detail="У фирмы не указан сайт — скачивание прайса недоступно."
+        )
+    if not website.startswith(("http://", "https://")):
+        raise HTTPException(status_code=400, detail="Некорректный адрес сайта фирмы.")
+
+    try:
+        raw_items = await download_firm_price(firm.name, website)
+    except FirmPriceDownloadError as exc:
+        logger.warning("Скачивание прайса не удалось (firm_id=%s): %s", firm_id, exc)
+        raise HTTPException(status_code=502, detail=str(exc)) from exc
+
+    items = _prepare_price_items(raw_items)
+    if not items:
+        raise HTTPException(status_code=422, detail="На сайте не найдено актуальных цен на двери.")
+
+    try:
+        return _persist_price_items(session, firm, items, rem=f"Загружено автоматически с сайта {website}")
+    except RuntimeError as exc:
+        raise HTTPException(status_code=500, detail=str(exc)) from exc
 
 
 # --- Примечания к фирме (GET-страница /crm/firms/{id}/comments, см. views/crm/firm_comments.py) ---
