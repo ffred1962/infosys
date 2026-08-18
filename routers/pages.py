@@ -4,6 +4,7 @@ from typing import Callable
 from fastapi import APIRouter, Request
 
 from views.about import about_page
+from views.anketa import anketa_page
 from views.calculator import calculator_page
 from views.contacts import contacts_page
 from views.home import home_page
@@ -29,6 +30,7 @@ from views.admin.constants import constants_page
 from views.admin.bugs import bugs_page
 from views.admin.notifications import notifications_page
 from views.admin.login_info import login_info_page
+from views.admin.partner_applications import partner_applications_page
 
 
 router = APIRouter()
@@ -51,6 +53,7 @@ PAGE_ROUTES = [
     PageRoute("/contacts", contacts_page, "contacts_page"),
     PageRoute("/request", request_page, "request_page"),
     PageRoute("/calculator", calculator_page, "calculator_page"),
+    PageRoute("/anketa", anketa_page, "anketa_page"),
     PageRoute("/crm", crm_page, "crm_page"),
     PageRoute("/crm/tasks", tasks_page, "crm_tasks_page"),
     PageRoute("/crm/firm_finder", firm_finder_page, "crm_firm_finder_page"),
@@ -72,6 +75,7 @@ PAGE_ROUTES = [
     PageRoute("/admin/bugs", bugs_page, "admin_bugs_page"),
     PageRoute("/admin/notifications", notifications_page, "admin_notifications_page"),
     PageRoute("/admin/login_info", login_info_page, "admin_login_info_page"),
+    PageRoute("/admin/partner_applications", partner_applications_page, "admin_partner_applications_page"),
 ]
 
 

@@ -32,6 +32,7 @@ from middlewares.no_cache import no_cache_admin_middleware
 from middlewares.request_logging import request_logging_middleware
 from routers.admin_auth import router as admin_auth_router
 from routers.admin_usermgt import router as admin_usermgt_router
+from routers.anketa import router as anketa_router
 from routers.errors import http_exception_handler
 from routers.pages import router as pages_router
 
@@ -102,6 +103,7 @@ app.include_router(api_firm_router)
 app.include_router(pages_router)
 app.include_router(admin_auth_router)
 app.include_router(admin_usermgt_router)
+app.include_router(anketa_router)
 # MCP-мост для Claude (см. api/mcp_server.py) — смонтирован в КОРНЕ (не под
 # префиксом типа /infosys_mcp), потому что OAuth-discovery-эндпоинты
 # (/.well-known/oauth-authorization-server, /register и т.д.) по конвенции

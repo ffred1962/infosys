@@ -40,6 +40,8 @@ import models.firm_comment
 import models.channel_type
 import models.firm_channel
 import models.firm_event
+import models.application_state
+import models.partner_application
 
 from alembic import context
 from db.database import DB_URL

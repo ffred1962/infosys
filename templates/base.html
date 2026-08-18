@@ -24,6 +24,7 @@
         <div class="col-12 col-md-10 col-lg-8">
           <div class="card shadow-sm border-0">
             <div class="card-body p-4 p-md-5">
+              {% block topnav %}
               <nav class="d-flex gap-2 flex-wrap mb-4">
                 <a class="btn {% if active_page == 'home' %}btn-primary{% else %}btn-outline-primary{% endif %}" href="/proba">Главная</a>
                 <a class="btn {% if active_page == 'about' %}btn-primary{% else %}btn-outline-primary{% endif %}" href="/about">О проекте</a>
@@ -31,6 +32,7 @@
                 <a class="btn {% if active_page == 'calculator' %}btn-primary{% else %}btn-outline-primary{% endif %}" href="/calculator">Калькулятор</a>
                 <a class="btn {% if active_page == 'request' %}btn-primary{% else %}btn-outline-primary{% endif %}" href="/request">Request</a>
               </nav>
+              {% endblock %}
               {% block content %}{% endblock %}
               <footer class="app-footer mt-4 pt-3 border-top text-secondary small d-flex flex-wrap justify-content-between gap-2">
                 <span>Infosys Demo</span>

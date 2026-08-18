@@ -1,0 +1,174 @@
+{% extends "base1.html" %}
+
+{% block content %}
+<h1 class="display-6 fw-semibold mb-4">Анкеты партнёров</h1>
+
+<form method="get" action="/admin/partner_applications" class="row g-2 align-items-end mb-4">
+  <div class="col-12 col-sm-3">
+    <label for="paType" class="form-label">Тип</label>
+    <select id="paType" name="claimed_type_id" class="form-select">
+      <option value="">Все типы</option>
+      {% for ft in firm_types %}
+      <option value="{{ ft.id }}" {% if selected_claimed_type_id == ft.id %}selected{% endif %}>{{ ft.name }}</option>
+      {% endfor %}
+    </select>
+  </div>
+  <div class="col-12 col-sm-3">
+    <label for="paState" class="form-label">Рассмотрение</label>
+    <select id="paState" name="status_id" class="form-select">
+      <option value="">Все статусы</option>
+      {% for st in application_states %}
+      <option value="{{ st.id }}" {% if selected_status_id == st.id %}selected{% endif %}>{{ st.name }}</option>
+      {% endfor %}
+    </select>
+  </div>
+  <div class="col-12 col-sm-3">
+    <label for="paCity" class="form-label">Город</label>
+    <select id="paCity" name="city_id" class="form-select">
+      <option value="">Все города</option>
+      {% for city in cities %}
+      <option value="{{ city.id }}" {% if selected_city_id == city.id %}selected{% endif %}>{{ city.name }}</option>
+      {% endfor %}
+    </select>
+  </div>
+  <div class="col-12 col-sm-3">
+    <label for="paQ" class="form-label">Имя / компания</label>
+    <input type="text" id="paQ" name="q" class="form-control" placeholder="Поиск" value="{{ q }}">
+  </div>
+  <div class="col-12 col-sm-2 d-flex gap-2 mt-3">
+    <button type="submit" class="btn btn-primary flex-fill">
+      <i class="bi bi-funnel"></i> Найти
+    </button>
+    <a href="/admin/partner_applications" class="btn btn-outline-secondary" title="Сбросить фильтр" aria-label="Сбросить фильтр">
+      <i class="bi bi-x-lg"></i>
+    </a>
+  </div>
+</form>
+
+<p class="text-secondary mb-3">Найдено: {{ total }}</p>
+
+<div class="table-responsive">
+  <table class="table align-middle">
+    <thead class="table-primary">
+      <tr>
+        <th>Компания / Имя</th>
+        <th>Тип</th>
+        <th>Город</th>
+        <th>Телефон</th>
+        <th>Подана</th>
+        <th>Рассмотрение</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for row in applications %}
+      <tr>
+        <td>
+          <button type="button" class="btn btn-link p-0 text-start application-link" data-app-id="{{ row.application.id }}">
+            {{ row.application.company_name or row.application.full_name }}
+          </button>
+        </td>
+        <td>{{ row.type_name }}</td>
+        <td>{{ row.city_name or row.application.city_other or "—" }}</td>
+        <td>{{ row.application.phone }}</td>
+        <td>{{ row.application.created.strftime("%Y-%m-%d %H:%M") }}</td>
+        <td>{{ row.state_name }}</td>
+      </tr>
+      {% else %}
+      <tr>
+        <td colspan="6" class="text-center text-secondary">Анкет пока нет.</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+{% if total_pages > 1 %}
+<nav aria-label="Пагинация анкет">
+  <ul class="pagination">
+    <li class="page-item {% if page <= 1 %}disabled{% endif %}">
+      {% if page <= 1 %}
+      <span class="page-link" aria-disabled="true">Предыдущая</span>
+      {% else %}
+      <a class="page-link" href="/admin/partner_applications?{{ filter_query }}{{ '&' if filter_query }}page={{ page - 1 }}">Предыдущая</a>
+      {% endif %}
+    </li>
+    {% if page_numbers[0] > 1 %}
+    <li class="page-item"><a class="page-link" href="/admin/partner_applications?{{ filter_query }}{{ '&' if filter_query }}page=1">1</a></li>
+    {% if page_numbers[0] > 2 %}
+    <li class="page-item disabled"><span class="page-link">…</span></li>
+    {% endif %}
+    {% endif %}
+    {% for p in page_numbers %}
+    <li class="page-item {% if p == page %}active{% endif %}">
+      <a class="page-link" href="/admin/partner_applications?{{ filter_query }}{{ '&' if filter_query }}page={{ p }}">{{ p }}</a>
+    </li>
+    {% endfor %}
+    {% if page_numbers[-1] < total_pages %}
+    {% if page_numbers[-1] < total_pages - 1 %}
+    <li class="page-item disabled"><span class="page-link">…</span></li>
+    {% endif %}
+    <li class="page-item"><a class="page-link" href="/admin/partner_applications?{{ filter_query }}{{ '&' if filter_query }}page={{ total_pages }}">{{ total_pages }}</a></li>
+    {% endif %}
+    <li class="page-item {% if page >= total_pages %}disabled{% endif %}">
+      {% if page >= total_pages %}
+      <span class="page-link" aria-disabled="true">Следующая</span>
+      {% else %}
+      <a class="page-link" href="/admin/partner_applications?{{ filter_query }}{{ '&' if filter_query }}page={{ page + 1 }}">Следующая</a>
+      {% endif %}
+    </li>
+  </ul>
+</nav>
+{% endif %}
+
+<!-- Содержимое анкет — по одной на строку, инертные <template>, JS клонирует
+     нужную в модалку по клику (та же техника, что и usermgt.html). Просмотр
+     только для чтения — редактирование/смена status_id в этой версии не
+     предусмотрены. -->
+{% for row in applications %}
+<template id="application-card-{{ row.application.id }}">
+  <dl class="row mb-0">
+    <dt class="col-5">Имя</dt><dd class="col-7">{{ row.application.full_name }}</dd>
+    <dt class="col-5">Телефон</dt><dd class="col-7">{{ row.application.phone }}</dd>
+    <dt class="col-5">Email</dt><dd class="col-7">{{ row.application.email or "—" }}</dd>
+    <dt class="col-5">Тип</dt><dd class="col-7">{{ row.type_name }}</dd>
+    <dt class="col-5">Компания</dt><dd class="col-7">{{ row.application.company_name or "—" }}</dd>
+    <dt class="col-5">Сайт компании</dt><dd class="col-7">{{ row.application.company_website or "—" }}</dd>
+    <dt class="col-5">Деятельность</dt><dd class="col-7">{{ row.application.activity_type or "—" }}</dd>
+    <dt class="col-5">Город</dt><dd class="col-7">{{ row.city_name or row.application.city_other or "—" }}</dd>
+    <dt class="col-5">Физический офис</dt>
+    <dd class="col-7">
+      {% if row.application.has_physical_office is none %}Не указано
+      {% elif row.application.has_physical_office %}Да
+      {% else %}Нет
+      {% endif %}
+    </dd>
+    <dt class="col-5">Сегмент клиентов</dt><dd class="col-7">{{ row.application.customer_segment or "—" }}</dd>
+    <dt class="col-5">Проектов в год</dt><dd class="col-7">{{ row.application.projects_count or "—" }}</dd>
+    <dt class="col-5">О проектах</dt><dd class="col-7">{{ row.application.projects_description or "—" }}</dd>
+    <dt class="col-5">Хочет скидку</dt><dd class="col-7">{{ "Да" if row.application.wants_discount else "Нет" }}</dd>
+    <dt class="col-5">Хочет образец</dt><dd class="col-7">{{ "Да" if row.application.wants_sample else "Нет" }}</dd>
+    <dt class="col-5">Комментарий</dt><dd class="col-7">{{ row.application.comment or "—" }}</dd>
+    <dt class="col-5">Подана</dt><dd class="col-7">{{ row.application.created.strftime("%Y-%m-%d %H:%M") }}</dd>
+    <dt class="col-5">Рассмотрение</dt><dd class="col-7">{{ row.state_name }}</dd>
+    <dt class="col-5">IP</dt><dd class="col-7">{{ row.application.client_ip or "—" }}</dd>
+    <dt class="col-5">User-Agent</dt><dd class="col-7 text-break">{{ row.application.user_agent or "—" }}</dd>
+  </dl>
+</template>
+{% endfor %}
+
+<div class="modal fade" id="applicationModal" tabindex="-1" aria-labelledby="applicationModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="applicationModalLabel">Анкета</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Закрыть"></button>
+      </div>
+      <div class="modal-body" id="applicationModalBody"></div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="/js/partner_applications.js"></script>
+{% endblock %}

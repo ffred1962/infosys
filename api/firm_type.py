@@ -12,6 +12,7 @@ from sqlmodel import Session, select
 from core.auth import resolve_admin_access
 from db.database import get_session
 from models.firm_type import FirmType
+from models.partner_application import PartnerApplication
 
 
 logger = logging.getLogger("infosys.api.firm_type")
@@ -103,5 +104,21 @@ def delete_firm_type(
     if target is None:
         raise HTTPException(status_code=404, detail="Тип фирмы не найден.")
 
+    in_use = session.exec(
+        select(PartnerApplication).where(PartnerApplication.claimed_type_id == firm_type_id)
+    ).first()
+    if in_use is not None:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Нельзя удалить тип фирмы «{target.name}» — по нему есть анкеты партнёров.",
+        )
+
     session.delete(target)
-    session.commit()
+    try:
+        session.commit()
+    except IntegrityError:
+        session.rollback()
+        raise HTTPException(
+            status_code=400,
+            detail=f"Нельзя удалить тип фирмы «{target.name}» — по нему есть анкеты партнёров.",
+        )

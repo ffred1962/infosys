@@ -1,0 +1,137 @@
+{% extends "base.html" %}
+
+{# Публичная анкета — без верхнего меню base.html (не относится к
+   заявителю, у которого нет аккаунта в системе), см. блок topnav там. #}
+{% block topnav %}{% endblock %}
+
+{% block content %}
+<span class="badge text-bg-success mb-3">Страница</span>
+<h1 class="display-6 fw-semibold mb-3">Анкета партнёра</h1>
+
+{% if submitted %}
+<div class="alert alert-success" role="alert">
+  Спасибо! Анкета отправлена, мы её рассмотрим и свяжемся с вами.
+</div>
+<p class="text-secondary">Сейчас вы будете перенаправлены на сайт компании...</p>
+<script>
+  setTimeout(function () {
+    window.location.href = "https://newmodelli.com";
+  }, 4000);
+</script>
+{% else %}
+<p class="lead text-secondary mb-4">
+  Расскажите немного о себе и своей деятельности — это поможет нам предложить вам подходящие условия сотрудничества.
+</p>
+
+{% if error %}
+<div class="alert alert-danger" role="alert">{{ error }}</div>
+{% endif %}
+
+<form method="post" action="/anketa/submit">
+  <h6 class="text-secondary text-uppercase small mb-2">Контакты</h6>
+  <div class="row g-3 mb-4">
+    <div class="col-12 col-md-6">
+      <label class="form-label">Ваше ФИО *</label>
+      <input type="text" class="form-control" name="full_name" value="{{ full_name }}" required>
+    </div>
+    <div class="col-12 col-md-6">
+      <label class="form-label">Телефон *</label>
+      <input type="text" class="form-control" name="phone" value="{{ phone }}" required>
+    </div>
+    <div class="col-12 col-md-6">
+      <label class="form-label">Email</label>
+      <input type="email" class="form-control" name="email" value="{{ email }}">
+    </div>
+  </div>
+
+  <h6 class="text-secondary text-uppercase small mb-2">О вашей деятельности</h6>
+  <div class="row g-3 mb-4">
+    <div class="col-12 col-md-6">
+      <label class="form-label">Ваш тип *</label>
+      <select class="form-select" name="claimed_type_id" required>
+        <option value="">— выберите —</option>
+        {% for ft in firm_types %}
+        <option value="{{ ft.id }}" {% if selected_claimed_type_id == ft.id|string %}selected{% endif %}>{{ ft.name }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="col-12 col-md-6">
+      <label class="form-label">Чем вы занимаетесь</label>
+      <input type="text" class="form-control" name="activity_type" value="{{ activity_type }}" placeholder="например, дизайн интерьеров">
+    </div>
+    <div class="col-12 col-md-6">
+      <label class="form-label">Название компании/бюро</label>
+      <input type="text" class="form-control" name="company_name" value="{{ company_name }}">
+    </div>
+    <div class="col-12 col-md-6">
+      <label class="form-label">Сайт компании</label>
+      <input type="text" class="form-control" name="company_website" value="{{ company_website }}">
+    </div>
+  </div>
+
+  <h6 class="text-secondary text-uppercase small mb-2">Город *</h6>
+  <p class="text-secondary small mb-2">Выберите ваш город из списка, либо, если его нет в списке — впишите название ниже.</p>
+  <div class="row g-3 mb-4">
+    <div class="col-12 col-md-6">
+      <select class="form-select" name="city_id">
+        <option value="">— выберите город —</option>
+        {% for city in cities %}
+        <option value="{{ city.id }}" {% if selected_city_id == city.id|string %}selected{% endif %}>{{ city.name }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="col-12 col-md-6">
+      <input type="text" class="form-control" name="city_other" value="{{ city_other }}" placeholder="если города нет в списке">
+    </div>
+  </div>
+
+  <h6 class="text-secondary text-uppercase small mb-2">Дополнительно</h6>
+  <div class="row g-3 mb-4">
+    <div class="col-12 col-md-6">
+      <label class="form-label">Есть ли у вас физический офис/студия/шоурум?</label>
+      <select class="form-select" name="has_physical_office">
+        <option value="" {% if has_physical_office_value == "" %}selected{% endif %}>Не знаю / не указываю</option>
+        <option value="yes" {% if has_physical_office_value == "yes" %}selected{% endif %}>Да</option>
+        <option value="no" {% if has_physical_office_value == "no" %}selected{% endif %}>Нет</option>
+      </select>
+    </div>
+    <div class="col-12 col-md-6">
+      <label class="form-label">Сегмент ваших клиентов</label>
+      <select class="form-select" name="customer_segment">
+        <option value="">— не указано —</option>
+        {% for option in customer_segment_options %}
+        <option value="{{ option }}" {% if option == customer_segment %}selected{% endif %}>{{ option }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="col-12 col-md-6">
+      <label class="form-label">Сколько у вас проектов (примерно, за год)</label>
+      <input type="text" class="form-control" name="projects_count" value="{{ projects_count }}" placeholder="например, 10-20 или «не знаю»">
+    </div>
+    <div class="col-12">
+      <label class="form-label">Расскажите о ваших проектах</label>
+      <textarea class="form-control" name="projects_description" rows="2">{{ projects_description }}</textarea>
+    </div>
+  </div>
+
+  <h6 class="text-secondary text-uppercase small mb-2">Что вас интересует</h6>
+  <div class="mb-4">
+    <div class="form-check">
+      <input class="form-check-input" type="checkbox" name="wants_discount" value="1" id="anketaWantsDiscount" {% if wants_discount_checked %}checked{% endif %}>
+      <label class="form-check-label" for="anketaWantsDiscount">Партнёрская скидка</label>
+    </div>
+    <div class="form-check">
+      <input class="form-check-input" type="checkbox" name="wants_sample" value="1" id="anketaWantsSample" {% if wants_sample_checked %}checked{% endif %}>
+      <label class="form-check-label" for="anketaWantsSample">Бесплатный образец</label>
+    </div>
+  </div>
+
+  <div class="mb-4">
+    <label class="form-label">Комментарий</label>
+    <textarea class="form-control" name="comment" rows="3">{{ comment }}</textarea>
+  </div>
+
+  <button type="submit" class="btn btn-primary">Отправить анкету</button>
+</form>
+{% endif %}
+{% endblock %}
