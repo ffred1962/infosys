@@ -5,6 +5,7 @@ routers/admin_auth.py: PAGE_ROUTES в routers/pages.py по конвенции �
 GET-роуты.
 """
 
+import logging
 from typing import Optional
 
 from fastapi import APIRouter, Depends, Form, HTTPException, Request
@@ -15,9 +16,14 @@ from db.database import get_session
 from models.application_state import ApplicationState
 from models.city import City
 from models.firm_type import FirmType
+from models.notification import Notification
 from models.partner_application import CUSTOMER_SEGMENT_OPTIONS, PartnerApplication
+from models.role import Role
+from models.user_role import UserRole
 from views.base import render_page
 
+
+logger = logging.getLogger("infosys.routers.anketa")
 
 router = APIRouter()
 
@@ -52,6 +58,13 @@ _LENGTH_LIMITS = (
     ("Количество проектов", "projects_count", 100),
     ("Описание проектов", "projects_description", 3000),
     ("Сегмент клиентов", "customer_segment", 100),
+    ("Instagram", "instagram", 300),
+    ("Facebook", "facebook", 300),
+    ("LinkedIn", "linkedin", 300),
+    ("Лет на рынке", "years_in_business", 100),
+    ("Количество сотрудников", "team_size", 100),
+    ("Бренды дверей", "current_brands", 500),
+    ("ИНН/ОКПО", "tax_id", 50),
     ("Комментарий", "comment", 5000),
 )
 
@@ -134,11 +147,34 @@ def submit_anketa(
     projects_description: str = Form(""),
     projects_count: str = Form(""),
     customer_segment: str = Form(""),
+    instagram: str = Form(""),
+    facebook: str = Form(""),
+    linkedin: str = Form(""),
+    years_in_business: str = Form(""),
+    team_size: str = Form(""),
+    current_brands: str = Form(""),
+    tax_id: str = Form(""),
     wants_discount: Optional[str] = Form(None),
     wants_sample: Optional[str] = Form(None),
     comment: str = Form(""),
+    hp_x92q: str = Form(""),  # honeypot — см. templates/anketa.html, реальный посетитель его не видит/не заполняет
     session: Session = Depends(get_session),
 ):
+    if hp_x92q.strip():
+        # Похоже на бота — молча притворяемся успехом, ничего не создавая и
+        # не сохраняя, и не показываем боту, что его распознали (честная
+        # ошибка подсказала бы, какое поле нужно оставлять пустым). Но
+        # логируем сам факт срабатывания (с IP/UA) — иначе ложные срабатывания
+        # (например, агрессивный автозаполнитель браузера у реального
+        # посетителя) были бы никому не видны и заявитель молча терял бы
+        # анкету без единого следа в системе.
+        logger.warning(
+            "Anketa submission discarded as spam (honeypot filled): ip=%s ua=%s",
+            request.client.host if request.client else "unknown",
+            request.headers.get("user-agent", ""),
+        )
+        return RedirectResponse(url="/anketa?submitted=1", status_code=303)
+
     full_name = full_name.strip()
     phone = phone.strip()
     email = email.strip()
@@ -148,6 +184,13 @@ def submit_anketa(
     city_other = city_other.strip()
     projects_description = projects_description.strip()
     projects_count = projects_count.strip()
+    instagram = instagram.strip()
+    facebook = facebook.strip()
+    linkedin = linkedin.strip()
+    years_in_business = years_in_business.strip()
+    team_size = team_size.strip()
+    current_brands = current_brands.strip()
+    tax_id = tax_id.strip()
     comment = comment.strip()
 
     # Ровно те же ключи, что views/anketa.py:_BLANK_FIELDS — чтобы повторно
@@ -166,6 +209,13 @@ def submit_anketa(
         "projects_description": projects_description,
         "projects_count": projects_count,
         "customer_segment": customer_segment,
+        "instagram": instagram,
+        "facebook": facebook,
+        "linkedin": linkedin,
+        "years_in_business": years_in_business,
+        "team_size": team_size,
+        "current_brands": current_brands,
+        "tax_id": tax_id,
         "wants_discount_checked": bool(wants_discount),
         "wants_sample_checked": bool(wants_sample),
         "comment": comment,
@@ -212,6 +262,13 @@ def submit_anketa(
         projects_description=projects_description or None,
         projects_count=projects_count or None,
         customer_segment=customer_segment or None,
+        instagram=instagram or None,
+        facebook=facebook or None,
+        linkedin=linkedin or None,
+        years_in_business=years_in_business or None,
+        team_size=team_size or None,
+        current_brands=current_brands or None,
+        tax_id=tax_id or None,
         wants_discount=bool(wants_discount),
         wants_sample=bool(wants_sample),
         comment=comment or None,
@@ -223,6 +280,22 @@ def submit_anketa(
         user_agent=request.headers.get("user-agent", "")[:MAX_REQUEST_FIELD_LENGTH] or None,
     )
     session.add(application)
+    session.flush()  # получаем application.id для текста уведомления, коммитим всё одним махом ниже
+
+    # Уведомляем всех админов о новой анкете — тот же fan-out, что и
+    # api/bug.py:report_bug. Заявка полностью неаутентифицированная, реального
+    # User-отправителя нет, так что creator_id уведомления = сам получатель
+    # (creator_id == receiver_id) — не хак, тот же случай, что CLAUDE.md уже
+    # описывает для баг-репортов ("админ, репортящий свой баг, тоже получает
+    # уведомление"), просто здесь единственный доступный вариант, а не один из.
+    admin_ids = session.exec(
+        select(UserRole.user_id).join(Role, Role.id == UserRole.role_id).where(Role.name == "admin")
+    ).all()
+    applicant_label = company_name or full_name
+    notify_msg = f"Новая анкета партнёра #{application.id} от {applicant_label} ({phone})"
+    for admin_id in admin_ids:
+        session.add(Notification(creator_id=admin_id, receiver_id=admin_id, msg=notify_msg))
+
     session.commit()
 
     return RedirectResponse(url="/anketa?submitted=1", status_code=303)

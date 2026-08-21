@@ -3,6 +3,7 @@ from urllib.parse import urlencode
 
 from fastapi import Depends, HTTPException, Request
 from sqlalchemy import func
+from sqlalchemy.orm import aliased
 from sqlmodel import Session, select
 
 from core.auth import resolve_admin_access
@@ -11,7 +12,15 @@ from models.application_state import ApplicationState
 from models.city import City
 from models.firm_type import FirmType
 from models.partner_application import PartnerApplication
+from models.users import User
 from views.base import render_page
+
+
+# Отдельный алиас на User — verified_by ссылается на ту же таблицу user, что
+# и обычный логин, aliased() нужен ровно по той же причине, что и в
+# views/crm/events.py/views/admin/notifications.py (два независимых join'а на
+# один и тот же user были бы неоднозначны без алиаса).
+VerifierUser = aliased(User)
 
 
 # Тот же паттерн фильтр+пагинация, что и views/crm/firms.py — просмотр анкет,
@@ -87,12 +96,14 @@ def partner_applications_page(
     # LEFT JOIN на City — city_id может быть NULL (заявитель указал город
     # текстом, см. city_other), inner join такие строки бы просто скрыл.
     # claimed_type_id/status_id у анкеты всегда заполнены (обе NOT NULL), так
-    # что обычный join по ним ничего не потеряет.
+    # что обычный join по ним ничего не потеряет. VerifierUser — тоже LEFT
+    # JOIN: verified_by пустой у ещё не проверенных анкет.
     data_stmt = (
-        select(PartnerApplication, City.name, FirmType.name, ApplicationState.name)
+        select(PartnerApplication, City.name, FirmType.name, ApplicationState.name, VerifierUser.email)
         .join(City, City.id == PartnerApplication.city_id, isouter=True)
         .join(FirmType, FirmType.id == PartnerApplication.claimed_type_id)
         .join(ApplicationState, ApplicationState.id == PartnerApplication.status_id)
+        .join(VerifierUser, VerifierUser.id == PartnerApplication.verified_by, isouter=True)
     )
     for condition in conditions:
         data_stmt = data_stmt.where(condition)
@@ -103,8 +114,14 @@ def partner_applications_page(
     )
     rows = session.exec(data_stmt).all()
     applications = [
-        {"application": app, "city_name": city_name, "type_name": type_name, "state_name": state_name}
-        for app, city_name, type_name, state_name in rows
+        {
+            "application": app,
+            "city_name": city_name,
+            "type_name": type_name,
+            "state_name": state_name,
+            "verifier_email": verifier_email,
+        }
+        for app, city_name, type_name, state_name, verifier_email in rows
     ]
 
     cities = session.exec(select(City).order_by(City.name)).all()

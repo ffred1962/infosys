@@ -28,6 +28,22 @@
 {% endif %}
 
 <form method="post" action="/anketa/submit">
+  {# Honeypot против ботов: реальный посетитель это поле не видит и не
+     заполняет (спрятано за пределы экрана, не через display:none — часть
+     ботов такие поля всё-таки пропускает; tabindex/autocomplete не дают
+     попасть туда табом/автозаполнением). Имя поля намеренно бессмысленное
+     ("hp_x92q"), а не что-то вроде "website"/"url" — такие узнаваемые имена
+     сами являются целью эвристик автозаполнения браузеров/менеджеров паролей
+     (autocomplete="off" они часто игнорируют), а значит по ним честный
+     посетитель рисковал бы молча "спалиться" как бот. Если поле всё же
+     непустое — routers/anketa.py:submit_anketa логирует это (чтобы админ мог
+     заметить рост ложных срабатываний) и молча притворяется успехом, не
+     создавая запись и не показывая боту, что его вычислили. #}
+  <div style="position:absolute; left:-9999px; top:-9999px;" aria-hidden="true">
+    <label for="anketaHp">Оставьте это поле пустым</label>
+    <input type="text" id="anketaHp" name="hp_x92q" tabindex="-1" autocomplete="off">
+  </div>
+
   <h6 class="text-secondary text-uppercase small mb-2">Контакты</h6>
   <div class="row g-3 mb-4">
     <div class="col-12 col-md-6">
@@ -111,6 +127,38 @@
     <div class="col-12">
       <label class="form-label">Расскажите о ваших проектах</label>
       <textarea class="form-control" name="projects_description" rows="2">{{ projects_description }}</textarea>
+    </div>
+  </div>
+
+  <h6 class="text-secondary text-uppercase small mb-2">Для верификации (по желанию)</h6>
+  <div class="row g-3 mb-4">
+    <div class="col-12 col-md-4">
+      <label class="form-label">Instagram</label>
+      <input type="text" class="form-control" name="instagram" value="{{ instagram }}" placeholder="ссылка или @имя">
+    </div>
+    <div class="col-12 col-md-4">
+      <label class="form-label">Facebook</label>
+      <input type="text" class="form-control" name="facebook" value="{{ facebook }}" placeholder="ссылка на страницу">
+    </div>
+    <div class="col-12 col-md-4">
+      <label class="form-label">LinkedIn</label>
+      <input type="text" class="form-control" name="linkedin" value="{{ linkedin }}" placeholder="ссылка на профиль/компанию">
+    </div>
+    <div class="col-12 col-md-6">
+      <label class="form-label">Сколько лет на рынке компания/студия</label>
+      <input type="text" class="form-control" name="years_in_business" value="{{ years_in_business }}" placeholder="например, 3 года или «не знаю»">
+    </div>
+    <div class="col-12 col-md-6">
+      <label class="form-label">Количество сотрудников</label>
+      <input type="text" class="form-control" name="team_size" value="{{ team_size }}" placeholder="например, 5 или «не знаю»">
+    </div>
+    <div class="col-12 col-md-6">
+      <label class="form-label">С какими брендами дверей уже работаете</label>
+      <input type="text" class="form-control" name="current_brands" value="{{ current_brands }}">
+    </div>
+    <div class="col-12 col-md-6">
+      <label class="form-label">ИНН (для ФОП) / ОКПО (для организаций)</label>
+      <input type="text" class="form-control" name="tax_id" value="{{ tax_id }}">
     </div>
   </div>
 

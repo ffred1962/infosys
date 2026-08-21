@@ -23,6 +23,7 @@ from api.constants import router as api_constants_router
 from api.bug import router as api_bug_router
 from api.admin_bug import router as api_admin_bug_router
 from api.admin_notification import router as api_admin_notification_router
+from api.admin_partner_applications import router as api_admin_partner_applications_router
 from api.task import router as api_task_router
 from api.firm import router as api_firm_router
 from api.mcp_server import mcp as infosys_mcp
@@ -98,6 +99,7 @@ app.include_router(api_constants_router)
 app.include_router(api_bug_router)
 app.include_router(api_admin_bug_router)
 app.include_router(api_admin_notification_router)
+app.include_router(api_admin_partner_applications_router)
 app.include_router(api_task_router)
 app.include_router(api_firm_router)
 app.include_router(pages_router)

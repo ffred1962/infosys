@@ -121,9 +121,12 @@
 {% endif %}
 
 <!-- Содержимое анкет — по одной на строку, инертные <template>, JS клонирует
-     нужную в модалку по клику (та же техника, что и usermgt.html). Просмотр
-     только для чтения — редактирование/смена status_id в этой версии не
-     предусмотрены. -->
+     нужную в модалку по клику (та же техника, что и usermgt.html). Сама
+     анкета read-only; отдельный блок "Проверка" внизу (статус + заметки +
+     кнопка "Сохранить") — единственное редактируемое место, одной формой
+     PATCH api/admin_partner_applications.py:review_application через
+     js/partner_applications.js. Остальные поля анкеты по-прежнему нельзя
+     редактировать из этой карточки. -->
 {% for row in applications %}
 <template id="application-card-{{ row.application.id }}">
   <dl class="row mb-0">
@@ -145,14 +148,67 @@
     <dt class="col-5">Сегмент клиентов</dt><dd class="col-7">{{ row.application.customer_segment or "—" }}</dd>
     <dt class="col-5">Проектов в год</dt><dd class="col-7">{{ row.application.projects_count or "—" }}</dd>
     <dt class="col-5">О проектах</dt><dd class="col-7">{{ row.application.projects_description or "—" }}</dd>
+    <dt class="col-5">Instagram</dt>
+    <dd class="col-7">
+      {% if row.application.instagram and (row.application.instagram.startswith("http://") or row.application.instagram.startswith("https://")) %}
+      <a href="{{ row.application.instagram }}" target="_blank" rel="noopener noreferrer">{{ row.application.instagram }}</a>
+      {% else %}{{ row.application.instagram or "—" }}
+      {% endif %}
+    </dd>
+    <dt class="col-5">Facebook</dt>
+    <dd class="col-7">
+      {% if row.application.facebook and (row.application.facebook.startswith("http://") or row.application.facebook.startswith("https://")) %}
+      <a href="{{ row.application.facebook }}" target="_blank" rel="noopener noreferrer">{{ row.application.facebook }}</a>
+      {% else %}{{ row.application.facebook or "—" }}
+      {% endif %}
+    </dd>
+    <dt class="col-5">LinkedIn</dt>
+    <dd class="col-7">
+      {% if row.application.linkedin and (row.application.linkedin.startswith("http://") or row.application.linkedin.startswith("https://")) %}
+      <a href="{{ row.application.linkedin }}" target="_blank" rel="noopener noreferrer">{{ row.application.linkedin }}</a>
+      {% else %}{{ row.application.linkedin or "—" }}
+      {% endif %}
+    </dd>
+    <dt class="col-5">Лет на рынке</dt><dd class="col-7">{{ row.application.years_in_business or "—" }}</dd>
+    <dt class="col-5">Сотрудников</dt><dd class="col-7">{{ row.application.team_size or "—" }}</dd>
+    <dt class="col-5">Текущие бренды</dt><dd class="col-7">{{ row.application.current_brands or "—" }}</dd>
+    <dt class="col-5">ИНН/ОКПО</dt><dd class="col-7">{{ row.application.tax_id or "—" }}</dd>
     <dt class="col-5">Хочет скидку</dt><dd class="col-7">{{ "Да" if row.application.wants_discount else "Нет" }}</dd>
     <dt class="col-5">Хочет образец</dt><dd class="col-7">{{ "Да" if row.application.wants_sample else "Нет" }}</dd>
     <dt class="col-5">Комментарий</dt><dd class="col-7">{{ row.application.comment or "—" }}</dd>
     <dt class="col-5">Подана</dt><dd class="col-7">{{ row.application.created.strftime("%Y-%m-%d %H:%M") }}</dd>
-    <dt class="col-5">Рассмотрение</dt><dd class="col-7">{{ row.state_name }}</dd>
     <dt class="col-5">IP</dt><dd class="col-7">{{ row.application.client_ip or "—" }}</dd>
     <dt class="col-5">User-Agent</dt><dd class="col-7 text-break">{{ row.application.user_agent or "—" }}</dd>
   </dl>
+
+  {# Внутренняя проверка — не видна заявителю нигде на публичной стороне
+     (/anketa, /anketa/submit). Статус и заметки сохраняются одной формой:
+     PATCH api/admin_partner_applications.py:review_application сам выставит
+     verified_by = текущий админ и last_changed = сейчас при каждом сохранении
+     — оба поля никогда не редактируются напрямую. #}
+  <hr>
+  <h6 class="text-secondary text-uppercase small mb-2">Проверка (не видна заявителю)</h6>
+  <div class="mb-2">
+    <label class="form-label small mb-1">Статус рассмотрения</label>
+    <select class="form-select form-select-sm application-status-select">
+      {% for st in application_states %}
+      <option value="{{ st.id }}" {% if st.id == row.application.status_id %}selected{% endif %}>{{ st.name }}</option>
+      {% endfor %}
+    </select>
+  </div>
+  <div class="mb-2">
+    <label class="form-label small mb-1">Заметки проверки</label>
+    <textarea class="form-control form-control-sm application-notes" rows="3">{{ row.application.verification_notes or "" }}</textarea>
+  </div>
+  <div class="d-flex align-items-center gap-2">
+    <button type="button" class="btn btn-sm btn-primary application-status-save" data-app-id="{{ row.application.id }}">Сохранить</button>
+    <span class="text-secondary small application-verified-info">
+      {% if row.verifier_email %}Проверено: {{ row.verifier_email }}, {{ row.application.last_changed.strftime("%Y-%m-%d %H:%M") }}
+      {% else %}Ещё не проверено
+      {% endif %}
+    </span>
+  </div>
+  <div class="text-danger small application-status-error mt-1"></div>
 </template>
 {% endfor %}
 

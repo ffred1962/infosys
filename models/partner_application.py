@@ -62,6 +62,34 @@ class PartnerApplication(SQLModel, table=True):
     projects_count: Optional[str] = None  # текстом, не int — «неизвестно»/«10-20» тоже валидный ответ
     customer_segment: Optional[str] = None  # одно из CUSTOMER_SEGMENT_OPTIONS
 
+    # Поля ниже добавлены по итогам повторного просмотра anketa.docx — не для
+    # собственной логики скоринга (сам AI-агент верификации туда пока не
+    # реализован, это по-прежнему только сбор данных), а как "затравка" для
+    # его будущих модулей Organization/Business Verification: соцсети и
+    # текущие бренды — прямые сигналы, которые документ явно называет
+    # источником проверки принадлежности/коммерческого влияния; лет на рынке
+    # и число сотрудников — пункты того же чек-листа для Office & Exposure
+    # Verification. Все — необязательный свободный текст, тем же приёмом,
+    # что и projects_count («не знаю» — валидный ответ).
+    #
+    # Соцсети изначально были одним полем social_media; разбиты на три
+    # отдельных по прямому запросу пользователя — так проще и заявителю
+    # заполнять, и админу/будущему AI-агенту читать конкретную ссылку, не
+    # разбирая свободный текст с несколькими URL внутри.
+    instagram: Optional[str] = None
+    facebook: Optional[str] = None
+    linkedin: Optional[str] = None
+    years_in_business: Optional[str] = None
+    team_size: Optional[str] = None
+    current_brands: Optional[str] = None  # с какими брендами дверей уже работает/сотрудничает
+
+    # ИНН (для ФОП) или ОКПО (для организаций) — по прямому запросу
+    # пользователя при добавлении полей выше; одно поле на оба случая
+    # (заявитель вписывает то, что у него есть), не валидируется по формату/
+    # контрольной сумме — это просто заявленное значение для будущей ручной/
+    # AI-проверки, не юридически значимая ИНН-верификация.
+    tax_id: Optional[str] = None
+
     wants_discount: bool = Field(default=False, sa_column_kwargs={"server_default": "0"})
     wants_sample: bool = Field(default=False, sa_column_kwargs={"server_default": "0"})
 
@@ -79,3 +107,16 @@ class PartnerApplication(SQLModel, table=True):
     # спам-заявок с полностью неаутентифицированной публичной формы.
     client_ip: Optional[str] = Field(default=None, index=True)
     user_agent: Optional[str] = None
+
+    # Внутренняя проверка админом — не показывается заявителю нигде на
+    # публичной стороне (/anketa, /anketa/submit), только в карточке анкеты
+    # в /admin/partner_applications. Одна форма сохранения на статус+заметки
+    # (api/admin_partner_applications.py: PATCH .../review) выставляет
+    # verified_by/last_changed сама при каждом сохранении — оба поля никогда
+    # не передаются с клиента напрямую, тот же приём, что и Constant.updated.
+    verification_notes: Optional[str] = None
+    verified_by: Optional[int] = Field(default=None, foreign_key="user.id", index=True)
+    last_changed: datetime = Field(
+        default_factory=datetime.utcnow,
+        sa_column_kwargs={"server_default": func.now()},
+    )
