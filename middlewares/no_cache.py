@@ -1,6 +1,6 @@
 """
 Запрет кеширования браузером для аутентифицированных страниц (/admin, /crm)
-и их JSON API (/api/admin/..., /api/task, /api/firm), а также MCP-моста для
+и их JSON API (/api/admin/..., /api/task, /api/firm, /api/zakaz), а также MCP-моста для
 Claude (api/mcp_server.py) — у него нет одного общего префикса (смонтирован в
 корне ради OAuth-discovery, см. main.py), поэтому здесь перечислены его
 конкретные пути по отдельности, а не один префикс типа /infosys_mcp.
@@ -15,6 +15,7 @@ NO_CACHE_PATH_PREFIXES = (
     "/api/admin",
     "/api/task",
     "/api/firm",
+    "/api/zakaz",
     "/mcp",
     "/oauth_login",
     "/authorize",

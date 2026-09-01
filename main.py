@@ -26,6 +26,7 @@ from api.admin_notification import router as api_admin_notification_router
 from api.admin_partner_applications import router as api_admin_partner_applications_router
 from api.task import router as api_task_router
 from api.firm import router as api_firm_router
+from api.zakaz import router as api_zakaz_router
 from api.mcp_server import mcp as infosys_mcp
 from core.auth import SESSION_COOKIE_SECURE, SESSION_SECRET_KEY
 from db.migrate import upgrade_to_head
@@ -102,6 +103,7 @@ app.include_router(api_admin_notification_router)
 app.include_router(api_admin_partner_applications_router)
 app.include_router(api_task_router)
 app.include_router(api_firm_router)
+app.include_router(api_zakaz_router)
 app.include_router(pages_router)
 app.include_router(admin_auth_router)
 app.include_router(admin_usermgt_router)

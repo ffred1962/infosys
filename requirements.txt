@@ -11,3 +11,4 @@ python-dotenv
 beautifulsoup4
 mcp==1.28.1
 psycopg2-binary
+xlrd

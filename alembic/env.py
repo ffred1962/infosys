@@ -42,6 +42,7 @@ import models.firm_channel
 import models.firm_event
 import models.application_state
 import models.partner_application
+import models.zakaz
 
 from alembic import context
 from db.database import DB_URL

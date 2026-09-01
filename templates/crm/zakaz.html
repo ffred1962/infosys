@@ -1,0 +1,177 @@
+{% extends "base1.html" %}
+
+{% block content %}
+<h1 class="display-6 fw-semibold mb-4">Заказы</h1>
+
+<form method="get" action="/crm/zakaz" class="row g-2 align-items-end mb-4">
+  <div class="col-12 col-sm-2">
+    <label for="zakazCity" class="form-label">Город</label>
+    <select id="zakazCity" name="city_id" class="form-select">
+      <option value="">Все города</option>
+      {% for city in cities %}
+      <option value="{{ city.id }}" {% if selected_city_id == city.id %}selected{% endif %}>{{ city.name }}</option>
+      {% endfor %}
+    </select>
+  </div>
+  <div class="col-6 col-sm-2">
+    <label for="zakazDateFrom" class="form-label">Дата с</label>
+    <input type="date" id="zakazDateFrom" name="date_from" class="form-control" value="{{ date_from }}">
+  </div>
+  <div class="col-6 col-sm-2">
+    <label for="zakazDateTo" class="form-label">Дата по</label>
+    <input type="date" id="zakazDateTo" name="date_to" class="form-control" value="{{ date_to }}">
+  </div>
+  <div class="col-12 col-sm-2">
+    <label for="zakazQ" class="form-label">Фирма</label>
+    <input type="text" id="zakazQ" name="q" class="form-control" placeholder="Поиск по фирме" value="{{ q }}">
+  </div>
+  <div class="col-12 col-sm-2">
+    <label for="zakazNum" class="form-label">№ заказа</label>
+    <input type="text" id="zakazNum" name="num" class="form-control" placeholder="ДПА..." value="{{ num }}">
+  </div>
+  <div class="col-12 col-sm-2 d-flex gap-2">
+    <button type="submit" class="btn btn-primary flex-fill">
+      <i class="bi bi-funnel"></i> Найти
+    </button>
+    <a href="/crm/zakaz" class="btn btn-outline-secondary" title="Сбросить фильтр" aria-label="Сбросить фильтр">
+      <i class="bi bi-x-lg"></i>
+    </a>
+  </div>
+</form>
+
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <p class="text-secondary mb-0">Найдено: {{ total }}</p>
+  <button type="button" class="btn btn-outline-primary btn-sm" id="zakazAnalysisBtn">
+    <i class="bi bi-graph-up"></i> Анализ
+  </button>
+</div>
+
+<div class="table-responsive">
+  <table class="table align-middle">
+    <thead class="table-primary">
+      <tr>
+        <th>№ заказа</th>
+        <th>Дата</th>
+        <th>Фирма</th>
+        <th>Город</th>
+        <th>Адрес доставки</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for row in orders %}
+      <tr>
+        <td>{{ row.zakaz.num }}</td>
+        <td>{{ row.zakaz.ord_date.strftime("%Y-%m-%d") }}</td>
+        <td>
+          <button type="button" class="btn btn-link p-0 text-start zakaz-anketa-link" data-anketa-id="{{ row.anketa_id }}">
+            {{ row.firm_name }}
+          </button>
+        </td>
+        <td>{{ row.city_name }}</td>
+        <td>{{ row.zakaz.delivery_addr }}</td>
+      </tr>
+      {% else %}
+      <tr>
+        <td colspan="5" class="text-center text-secondary">Ничего не найдено.</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+{% if total_pages > 1 %}
+<nav aria-label="Пагинация заказов">
+  <ul class="pagination">
+    <li class="page-item {% if page <= 1 %}disabled{% endif %}">
+      {% if page <= 1 %}
+      <span class="page-link" aria-disabled="true">Предыдущая</span>
+      {% else %}
+      <a class="page-link" href="/crm/zakaz?{{ filter_query }}{{ '&' if filter_query }}page={{ page - 1 }}">Предыдущая</a>
+      {% endif %}
+    </li>
+    {% if page_numbers[0] > 1 %}
+    <li class="page-item"><a class="page-link" href="/crm/zakaz?{{ filter_query }}{{ '&' if filter_query }}page=1">1</a></li>
+    {% if page_numbers[0] > 2 %}
+    <li class="page-item disabled"><span class="page-link">…</span></li>
+    {% endif %}
+    {% endif %}
+    {% for p in page_numbers %}
+    <li class="page-item {% if p == page %}active{% endif %}">
+      <a class="page-link" href="/crm/zakaz?{{ filter_query }}{{ '&' if filter_query }}page={{ p }}">{{ p }}</a>
+    </li>
+    {% endfor %}
+    {% if page_numbers[-1] < total_pages %}
+    {% if page_numbers[-1] < total_pages - 1 %}
+    <li class="page-item disabled"><span class="page-link">…</span></li>
+    {% endif %}
+    <li class="page-item"><a class="page-link" href="/crm/zakaz?{{ filter_query }}{{ '&' if filter_query }}page={{ total_pages }}">{{ total_pages }}</a></li>
+    {% endif %}
+    <li class="page-item {% if page >= total_pages %}disabled{% endif %}">
+      {% if page >= total_pages %}
+      <span class="page-link" aria-disabled="true">Следующая</span>
+      {% else %}
+      <a class="page-link" href="/crm/zakaz?{{ filter_query }}{{ '&' if filter_query }}page={{ page + 1 }}">Следующая</a>
+      {% endif %}
+    </li>
+  </ul>
+</nav>
+{% endif %}
+
+<!-- Карточки анкет — read-only, по одной на уникального контрагента,
+     встречающегося на текущей странице (не по одной на строку заказа: у
+     одной фирмы обычно несколько заказов). JS клонирует нужную в модалку по
+     клику на название фирмы, та же техника, что и admin/partner_applications.html.
+     Внутренние поля проверки (verification_notes/verified_by/last_changed,
+     IP/User-Agent) сюда намеренно не попадают — это не админка. -->
+{% for anketa in anketas %}
+<template id="zakaz-anketa-card-{{ anketa.id }}">
+  <dl class="row mb-0">
+    <dt class="col-5">Имя</dt><dd class="col-7">{{ anketa.full_name }}</dd>
+    <dt class="col-5">Телефон</dt><dd class="col-7">{{ anketa.phone }}</dd>
+    <dt class="col-5">Email</dt><dd class="col-7">{{ anketa.email or "—" }}</dd>
+    <dt class="col-5">Компания</dt><dd class="col-7">{{ anketa.company_name or "—" }}</dd>
+    <dt class="col-5">Сайт компании</dt><dd class="col-7">{{ anketa.company_website or "—" }}</dd>
+    <dt class="col-5">Деятельность</dt><dd class="col-7">{{ anketa.activity_type or "—" }}</dd>
+    <dt class="col-5">Город</dt><dd class="col-7">{{ anketa.city_name or "—" }}</dd>
+    <dt class="col-5">ИНН/ОКПО</dt><dd class="col-7">{{ anketa.tax_id or "—" }}</dd>
+    <dt class="col-5">Комментарий</dt><dd class="col-7">{{ anketa.comment or "—" }}</dd>
+  </dl>
+</template>
+{% endfor %}
+
+<div class="modal fade" id="zakazAnketaModal" tabindex="-1" aria-labelledby="zakazAnketaModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="zakazAnketaModalLabel">Анкета контрагента</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Закрыть"></button>
+      </div>
+      <div class="modal-body" id="zakazAnketaModalBody"></div>
+    </div>
+  </div>
+</div>
+
+<!-- Отчёт по кнопке "Анализ" — анализирует ТОЛЬКО то, что уже прошло через
+     фильтр над таблицей (GET /api/zakaz/analysis с теми же параметрами
+     фильтра, что и текущая страница), а не весь список заказов. Контент
+     строится в js/zakaz.js через DOM API (createElement/textContent), без
+     innerHTML — те же данные (адрес/имя фирмы), что и остальная страница. -->
+<div class="modal fade" id="zakazAnalysisModal" tabindex="-1" aria-labelledby="zakazAnalysisModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-xl modal-dialog-scrollable">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="zakazAnalysisModalLabel">Анализ заказов (по текущему фильтру)</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Закрыть"></button>
+      </div>
+      <div class="modal-body">
+        <div id="zakazAnalysisError" class="alert alert-danger d-none"></div>
+        <div id="zakazAnalysisContent"></div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="/js/zakaz.js"></script>
+{% endblock %}

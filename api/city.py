@@ -12,6 +12,9 @@ from sqlmodel import Session, select
 from core.auth import resolve_admin_access
 from db.database import get_session
 from models.city import City
+from models.firm import Firm
+from models.partner_application import PartnerApplication
+from models.zakaz import Zakaz
 
 
 logger = logging.getLogger("infosys.api.city")
@@ -101,5 +104,35 @@ def delete_city(city_id: int, request: Request, session: Session = Depends(get_s
     if target is None:
         raise HTTPException(status_code=404, detail="Город не найден.")
 
+    firm_in_use = session.exec(select(Firm).where(Firm.city_id == city_id)).first()
+    if firm_in_use is not None:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Нельзя удалить город «{target.name}» — он используется в фирмах.",
+        )
+
+    application_in_use = session.exec(
+        select(PartnerApplication).where(PartnerApplication.city_id == city_id)
+    ).first()
+    if application_in_use is not None:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Нельзя удалить город «{target.name}» — по нему есть анкеты партнёров.",
+        )
+
+    zakaz_in_use = session.exec(select(Zakaz).where(Zakaz.city_id == city_id)).first()
+    if zakaz_in_use is not None:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Нельзя удалить город «{target.name}» — он используется в заказах.",
+        )
+
     session.delete(target)
-    session.commit()
+    try:
+        session.commit()
+    except IntegrityError:
+        session.rollback()
+        raise HTTPException(
+            status_code=400,
+            detail=f"Нельзя удалить город «{target.name}» — он используется в других записях.",
+        )

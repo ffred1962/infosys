@@ -13,3 +13,8 @@ data/*.db
 
 # Generated, not source
 openapi.json
+
+# One-off 1С export files used for data imports — real business data,
+# not source, never checked in (same convention as search_sources.json).
+*.xls
+*.xlsx
