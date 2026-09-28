@@ -198,10 +198,17 @@
   </div>
   <div class="mb-2">
     <label class="form-label small mb-1">Заметки проверки</label>
-    <textarea class="form-control form-control-sm application-notes" rows="3">{{ row.application.verification_notes or "" }}</textarea>
+    <textarea class="form-control form-control-sm application-notes" rows="8">{{ row.application.verification_notes or "" }}</textarea>
   </div>
-  <div class="d-flex align-items-center gap-2">
+  <div class="d-flex align-items-center gap-2 flex-wrap">
     <button type="button" class="btn btn-sm btn-primary application-status-save" data-app-id="{{ row.application.id }}">Сохранить</button>
+    {# "Анализировать" — AI-проверка анкеты (сайт, e-mail, соцсети, реестр по
+       ИНН/ЄДРПОУ, отзывы, см. core/partner_analysis.py); отчёт ДОПИСЫВАЕТСЯ в
+       "Заметки проверки" (старый текст остаётся) и сразу сохраняется в БД.
+       Идёт до нескольких минут — кнопка блокируется на время запроса. #}
+    <button type="button" class="btn btn-sm btn-outline-primary application-analyze" data-app-id="{{ row.application.id }}" data-last-changed="{{ row.application.last_changed.isoformat() }}">
+      <i class="bi bi-search"></i> Анализировать
+    </button>
     <span class="text-secondary small application-verified-info">
       {% if row.verifier_email %}Проверено: {{ row.verifier_email }}, {{ row.application.last_changed.strftime("%Y-%m-%d %H:%M") }}
       {% else %}Ещё не проверено

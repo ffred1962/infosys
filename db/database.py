@@ -39,7 +39,12 @@ if IS_SQLITE:
         cursor.execute("PRAGMA foreign_keys=ON")
         cursor.close()
 else:
-    engine = create_engine(DB_URL, echo=False)
+    # pool_pre_ping: серверная БД (Postgres/Neon) закрывает простаивающие
+    # соединения, а часть запросов приложения (AI-анализ анкеты, поиск фирм,
+    # скачивание прайса) держит паузу в минуты между двумя обращениями к БД —
+    # без проверки соединения перед выдачей из пула первый запрос после такой
+    # паузы мог упасть с OperationalError на "мёртвом" соединении.
+    engine = create_engine(DB_URL, echo=False, pool_pre_ping=True)
 
 
 def create_db_and_tables():

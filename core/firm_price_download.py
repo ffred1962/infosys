@@ -36,6 +36,7 @@ import ipaddress
 import logging
 import os
 import re
+import socket
 from typing import Optional
 from urllib.parse import urljoin, urlsplit
 
@@ -117,11 +118,12 @@ def _same_domain(url: str, root_netloc: str) -> bool:
     return netloc == root or netloc == f"www.{root}" or f"www.{netloc}" == root
 
 
-def _is_unsafe_host(host: str) -> bool:
-    try:
-        ip = ipaddress.ip_address(host)
-    except ValueError:
-        return False  # обычное доменное имя — DNS здесь не резолвим
+_UNSAFE_HOST_SUFFIXES = (".localhost", ".local", ".internal", ".lan", ".localdomain")
+# Часть IPv4 в "нестандартной" записи: десятичная, восьмеричная (0177) или hex (0x7f).
+_NUMERIC_HOST_PART_RE = re.compile(r"^(?:0[xX][0-9a-fA-F]*|[0-9]+)$")
+
+
+def _is_unsafe_ip(ip: "ipaddress.IPv4Address | ipaddress.IPv6Address") -> bool:
     return (
         ip.is_private
         or ip.is_loopback
@@ -130,6 +132,31 @@ def _is_unsafe_host(host: str) -> bool:
         or ip.is_multicast
         or ip.is_unspecified
     )
+
+
+def _is_unsafe_host(host: str) -> bool:
+    """True, если хост нельзя считать публичным. DNS здесь не резолвим
+    (функция вызывается из async-кода), поэтому проверяем только то, что видно
+    по самой строке: литеральные IP (в т.ч. нестандартные записи IPv4 вроде
+    127.1, 2130706433, 0x7f000001, 0177.0.0.1), localhost, безточечные
+    имена и служебные суффиксы (.local/.internal/.lan/.localdomain)."""
+    host = host.strip().lower().rstrip(".")
+    if not host:
+        return True
+    try:
+        return _is_unsafe_ip(ipaddress.ip_address(host))
+    except ValueError:
+        pass
+    # Нестандартная числовая запись IPv4: все части — числа (dec/oct/0xhex).
+    if all(_NUMERIC_HOST_PART_RE.match(part) for part in host.split(".")):
+        try:
+            canonical = socket.inet_aton(host)
+        except OSError:
+            return True  # похоже на IP, но не разбирается однозначно — не рискуем
+        return _is_unsafe_ip(ipaddress.IPv4Address(canonical))
+    if host == "localhost" or "." not in host:
+        return True
+    return host.endswith(_UNSAFE_HOST_SUFFIXES)
 
 
 def _is_safe_url(url: str) -> bool:

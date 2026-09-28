@@ -23,16 +23,7 @@ def strip_code_fence(text: str) -> str:
     return stripped
 
 
-def extract_balanced_json_array(text: str) -> str:
-    """Находит первый сбалансированный JSON-массив в тексте.
-
-    Модель иногда добавляет вступительную/завершающую фразу вокруг JSON, даже
-    когда попросили вывести только массив — поиск первого "[" и последнего "]"
-    ломается, если в этой фразе случайно встретится квадратная скобка, поэтому
-    здесь отслеживается глубина вложенности (с учётом строк) до первого
-    закрытия внешнего массива.
-    """
-
+def _extract_balanced(text: str, open_ch: str, close_ch: str, error_message: str) -> str:
     depth = 0
     start = None
     in_string = False
@@ -40,7 +31,7 @@ def extract_balanced_json_array(text: str) -> str:
 
     for i, ch in enumerate(text):
         if start is None:
-            if ch == "[":
+            if ch == open_ch:
                 start = i
                 depth = 1
             continue
@@ -56,14 +47,33 @@ def extract_balanced_json_array(text: str) -> str:
 
         if ch == '"':
             in_string = True
-        elif ch == "[":
+        elif ch == open_ch:
             depth += 1
-        elif ch == "]":
+        elif ch == close_ch:
             depth -= 1
             if depth == 0:
                 return text[start : i + 1]
 
-    raise AiJsonError("Не удалось найти JSON-массив в ответе модели.")
+    raise AiJsonError(error_message)
+
+
+def extract_balanced_json_array(text: str) -> str:
+    """Находит первый сбалансированный JSON-массив в тексте.
+
+    Модель иногда добавляет вступительную/завершающую фразу вокруг JSON, даже
+    когда попросили вывести только массив — поиск первого "[" и последнего "]"
+    ломается, если в этой фразе случайно встретится квадратная скобка, поэтому
+    здесь отслеживается глубина вложенности (с учётом строк) до первого
+    закрытия внешнего массива.
+    """
+
+    return _extract_balanced(text, "[", "]", "Не удалось найти JSON-массив в ответе модели.")
+
+
+def extract_balanced_json_object(text: str) -> str:
+    """То же, что extract_balanced_json_array, но для JSON-объекта {...}."""
+
+    return _extract_balanced(text, "{", "}", "Не удалось найти JSON-объект в ответе модели.")
 
 
 def parse_json_array(text: str) -> list:
@@ -75,4 +85,17 @@ def parse_json_array(text: str) -> list:
         raise AiJsonError("Модель вернула некорректный JSON.") from exc
     if not isinstance(data, list):
         raise AiJsonError("Модель вернула не список.")
+    return data
+
+
+def parse_json_object(text: str) -> dict:
+    """Полный разбор для JSON-объекта: снять код-fence, найти сбалансированный
+    объект, json.loads."""
+    object_text = extract_balanced_json_object(strip_code_fence(text))
+    try:
+        data = json.loads(object_text)
+    except json.JSONDecodeError as exc:
+        raise AiJsonError("Модель вернула некорректный JSON.") from exc
+    if not isinstance(data, dict):
+        raise AiJsonError("Модель вернула не объект.")
     return data
