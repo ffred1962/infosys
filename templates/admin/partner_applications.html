@@ -145,7 +145,11 @@
       {% else %}Нет
       {% endif %}
     </dd>
-    <dt class="col-5">Сегмент клиентов</dt><dd class="col-7">{{ row.application.customer_segment or "—" }}</dd>
+    <dt class="col-5">Ценовой сегмент</dt><dd class="col-7">{{ row.application.customer_segment or "—" }}</dd>
+    {# "; ", не ", " — два варианта из MARKET_SEGMENT_OPTIONS сами содержат запятую
+       в тексте ("HoReCa (гостиницы, рестораны)"), склейка через запятую визуально
+       неоднозначна при нескольких выбранных вариантах (баг, пойманный в код-ревью). #}
+    <dt class="col-5">Сегмент рынка</dt><dd class="col-7">{{ row.application.market_segments.split("|") | join("; ") if row.application.market_segments else "—" }}</dd>
     <dt class="col-5">Проектов в год</dt><dd class="col-7">{{ row.application.projects_count or "—" }}</dd>
     <dt class="col-5">О проектах</dt><dd class="col-7">{{ row.application.projects_description or "—" }}</dd>
     <dt class="col-5">Instagram</dt>

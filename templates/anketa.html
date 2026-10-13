@@ -112,13 +112,26 @@
       </select>
     </div>
     <div class="col-12 col-md-6">
-      <label class="form-label">Сегмент ваших клиентов</label>
+      <label class="form-label">Ценовой сегмент</label>
       <select class="form-select" name="customer_segment">
         <option value="">— не указано —</option>
         {% for option in customer_segment_options %}
         <option value="{{ option }}" {% if option == customer_segment %}selected{% endif %}>{{ option }}</option>
         {% endfor %}
       </select>
+    </div>
+    <div class="col-12">
+      <label class="form-label">Сегмент рынка (можно выбрать несколько)</label>
+      <div class="row row-cols-1 row-cols-md-2 g-2">
+        {% for option in market_segment_options %}
+        <div class="col">
+          <div class="form-check">
+            <input class="form-check-input" type="checkbox" name="market_segments" value="{{ option }}" id="marketSegment{{ loop.index }}" {% if option in market_segments %}checked{% endif %}>
+            <label class="form-check-label" for="marketSegment{{ loop.index }}">{{ option }}</label>
+          </div>
+        </div>
+        {% endfor %}
+      </div>
     </div>
     <div class="col-12 col-md-6">
       <label class="form-label">Сколько у вас проектов (примерно, за год)</label>

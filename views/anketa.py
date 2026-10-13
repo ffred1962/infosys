@@ -11,7 +11,7 @@ from sqlmodel import Session, select
 from db.database import get_session
 from models.city import City
 from models.firm_type import FirmType
-from models.partner_application import CUSTOMER_SEGMENT_OPTIONS
+from models.partner_application import CUSTOMER_SEGMENT_OPTIONS, MARKET_SEGMENT_OPTIONS
 from views.base import render_page
 
 
@@ -34,6 +34,7 @@ _BLANK_FIELDS = {
     "projects_description": "",
     "projects_count": "",
     "customer_segment": "",
+    "market_segments": [],  # list, не строка — шаблон проверяет "option in market_segments"
     "instagram": "",
     "facebook": "",
     "linkedin": "",
@@ -56,6 +57,7 @@ def anketa_page(request: Request, session: Session = Depends(get_session)):
         "cities": cities,
         "firm_types": firm_types,
         "customer_segment_options": CUSTOMER_SEGMENT_OPTIONS,
+        "market_segment_options": MARKET_SEGMENT_OPTIONS,
         "submitted": submitted,
         "error": None,
     }

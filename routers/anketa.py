@@ -17,7 +17,7 @@ from models.application_state import ApplicationState
 from models.city import City
 from models.firm_type import FirmType
 from models.notification import Notification
-from models.partner_application import CUSTOMER_SEGMENT_OPTIONS, PartnerApplication
+from models.partner_application import CUSTOMER_SEGMENT_OPTIONS, MARKET_SEGMENT_OPTIONS, PartnerApplication
 from models.role import Role
 from models.user_role import UserRole
 from views.base import render_page
@@ -57,7 +57,7 @@ _LENGTH_LIMITS = (
     ("Город", "city_other", 200),
     ("Количество проектов", "projects_count", 100),
     ("Описание проектов", "projects_description", 3000),
-    ("Сегмент клиентов", "customer_segment", 100),
+    ("Ценовой сегмент", "customer_segment", 100),
     ("Instagram", "instagram", 300),
     ("Facebook", "facebook", 300),
     ("LinkedIn", "linkedin", 300),
@@ -82,6 +82,7 @@ def _render_anketa_form(request: Request, session: Session, error: str, fields: 
         "cities": cities,
         "firm_types": firm_types,
         "customer_segment_options": CUSTOMER_SEGMENT_OPTIONS,
+        "market_segment_options": MARKET_SEGMENT_OPTIONS,
         "submitted": False,
         "error": error,
     }
@@ -147,6 +148,7 @@ def submit_anketa(
     projects_description: str = Form(""),
     projects_count: str = Form(""),
     customer_segment: str = Form(""),
+    market_segments: list[str] = Form([]),
     instagram: str = Form(""),
     facebook: str = Form(""),
     linkedin: str = Form(""),
@@ -193,6 +195,21 @@ def submit_anketa(
     tax_id = tax_id.strip()
     comment = comment.strip()
 
+    # Чекбоксы — принимаем только реально существующие значения (тот же
+    # "молча игнорируем некорректное/подделанное" приём, что и claimed_type_id/
+    # city_id ниже), сохраняя порядок MARKET_SEGMENT_OPTIONS, а не порядок
+    # отправки формы, и без дублей.
+    market_segments_selected = [
+        option for option in MARKET_SEGMENT_OPTIONS if option in market_segments
+    ]
+
+    # Тот же "молча игнорируем подделанное значение" приём, что и выше для
+    # market_segments (и ниже для claimed_type_id/city_id) — customer_segment
+    # приходит из <select> с фиксированными опциями, так что любое значение,
+    # не совпадающее ни с одной из CUSTOMER_SEGMENT_OPTIONS, означает
+    # подделанный запрос, а не реальный выбор, и не должно попасть в БД.
+    customer_segment_valid = customer_segment if customer_segment in CUSTOMER_SEGMENT_OPTIONS else None
+
     # Ровно те же ключи, что views/anketa.py:_BLANK_FIELDS — чтобы повторно
     # отрисованная форма показала введённое, а не откатилась к пустой.
     fields = {
@@ -209,6 +226,7 @@ def submit_anketa(
         "projects_description": projects_description,
         "projects_count": projects_count,
         "customer_segment": customer_segment,
+        "market_segments": market_segments_selected,
         "instagram": instagram,
         "facebook": facebook,
         "linkedin": linkedin,
@@ -261,7 +279,10 @@ def submit_anketa(
         has_physical_office=_tristate(has_physical_office),
         projects_description=projects_description or None,
         projects_count=projects_count or None,
-        customer_segment=customer_segment or None,
+        customer_segment=customer_segment_valid,
+        # "|", не запятая — см. models/partner_application.py: тексты опций сами
+        # могут содержать запятую.
+        market_segments="|".join(market_segments_selected) or None,
         instagram=instagram or None,
         facebook=facebook or None,
         linkedin=linkedin or None,
