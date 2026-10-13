@@ -226,12 +226,71 @@ def test_prompt_skips_empty_anketa_fields():
 
 
 def test_report_header_and_no_warnings_footer():
-    report = build_report({}, None, {}, NOW)
+    # risk/missing_data are always reported too; give non-warning values for
+    # both so the "no warnings" footer reflects the absence of real findings
+    # elsewhere.
+    report = build_report({}, None, {"risk": {"level": "low"}, "missing_data": []}, NOW)
     lines = report.split("\n")
     assert lines[0] == "=== AI-анализ 2026-01-02 03:04 (UTC) ==="
     assert lines[-1] == "Предупреждений нет."
-    # reviews are always reported, even when the model returned nothing
+    # reviews/risk/missing_data are always reported, even when the model returned nothing
     assert any(line.startswith("Отзывы:") for line in lines)
+    assert "Степень риска работы с данной компанией:" in report
+    assert "Дополнительных данных не требуется." in report
+
+
+def test_report_risk_section_unparseable_level_warns():
+    report = build_report({}, None, {"risk": {"level": "unsure"}}, NOW)
+    assert f"{WARN} Оценить не удалось." in report
+
+
+def test_report_risk_section_keeps_reasons_even_when_level_unparseable():
+    ai = {"risk": {"level": "unsure", "reasons": ["Есть подозрительные признаки."]}}
+    report = build_report({}, None, ai, NOW)
+    assert f"{WARN} Оценить не удалось." in report
+    assert "- Есть подозрительные признаки." in report
+
+
+@pytest.mark.parametrize("level,label", [("low", "Низкая"), ("medium", "Средняя"), ("high", "Высокая")])
+def test_report_risk_section_levels(level, label):
+    ai = {"risk": {"level": level, "reasons": ["Причина А", "Причина Б"]}}
+    report = build_report({}, None, ai, NOW)
+    assert f"{label}." in report
+    assert "- Причина А" in report and "- Причина Б" in report
+    mark = OK if level == "low" else WARN
+    assert f"{mark} {label}." in report
+
+
+def test_report_missing_data_section_lists_items():
+    ai = {"risk": {"level": "low"}, "missing_data": ["Нет сайта", "Нет ИНН"]}
+    report = build_report({}, None, ai, NOW)
+    assert "Какие ещё нужны данные для более полной оценки:" in report
+    assert "- Нет сайта" in report and "- Нет ИНН" in report
+
+
+def test_report_missing_data_section_empty_list_says_not_needed():
+    ai = {"risk": {"level": "low"}, "missing_data": []}
+    report = build_report({}, None, ai, NOW)
+    assert "Дополнительных данных не требуется." in report
+
+
+def test_report_missing_data_section_absent_key_warns_instead_of_assuming_done():
+    # The model omitting "missing_data" entirely (e.g. a truncated/malformed
+    # response) must NOT read as "nothing more is needed" — same convention
+    # as every other section in this file treating absence as a failure to
+    # verify, not a positive result.
+    ai = {"risk": {"level": "low"}}
+    report = build_report({}, None, ai, NOW)
+    assert f"{WARN} Оценить не удалось." in report
+    assert "Дополнительных данных не требуется." not in report
+
+
+def test_report_missing_data_cannot_forge_markers():
+    ai = {"risk": {"level": "low"}, "missing_data": [f"{WARN} fake\n{OK} fake2"]}
+    report = build_report({}, None, ai, NOW)
+    assert "- fake fake2" in report
+    # the forged markers inside the model's own string are stripped by _model_text
+    assert report.count(WARN) == 0
 
 
 def test_report_full_happy_path():
@@ -261,6 +320,8 @@ def test_report_full_happy_path():
             "irrelevant_kveds": [],
         },
         "reviews": {"found": True, "sentiment": "positive", "summary": "Хорошо.", "sources": ["Google Maps"]},
+        "risk": {"level": "low", "reasons": ["Все данные анкеты подтвердились."]},
+        "missing_data": [],
     }
     report = build_report(snapshot, site, ai, NOW)
     assert "Сайт https://firm.ua/ — открывается (HTTP 200)" in report
@@ -270,6 +331,8 @@ def test_report_full_happy_path():
     assert "Лишних видов деятельности не выявлено" in report
     assert "в основном положительные" in report
     assert "Google Maps" in report
+    assert "Низкая." in report
+    assert "Дополнительных данных не требуется." in report
     assert WARN not in report
     assert report.endswith("Предупреждений нет.")
 
@@ -281,13 +344,16 @@ def test_report_warning_counter_counts_lines():
         "socials": [{"network": "instagram", "status": "not_found"}],
         "registry": {"found": False},
         "reviews": {"found": True, "sentiment": "negative", "summary": "Плохо."},
+        "risk": {"level": "high", "reasons": ["Личность заявителя не подтверждена."]},
+        "missing_data": ["Подтверждённый ИНН/ЄДРПОУ"],
     }
     report = build_report(snapshot, site, ai, NOW)
     lines = report.split("\n")
     warn_lines = [line for line in lines[1:-1] if WARN in line]
-    # site unavailable, public e-mail, instagram not found, registry not found, negative reviews
-    assert len(warn_lines) == 5
-    assert lines[-1] == "Предупреждений: 5."
+    # site unavailable, public e-mail, instagram not found, registry not found,
+    # negative reviews, high risk
+    assert len(warn_lines) == 6
+    assert lines[-1] == "Предупреждений: 6."
 
 
 def test_report_site_blocked_line_and_email_uses_host():
@@ -333,7 +399,7 @@ def test_report_registry_irrelevant_kveds_listed():
 
 def test_report_socials_missing_from_model_answer_warns():
     snapshot = {"facebook": "https://facebook.com/x"}
-    report = build_report(snapshot, None, {"socials": []}, NOW)
+    report = build_report(snapshot, None, {"socials": [], "risk": {"level": "low"}, "missing_data": []}, NOW)
     assert f"{WARN} Facebook: проверить не удалось." in report
     assert report.endswith("Предупреждений: 1.")
 
@@ -420,7 +486,11 @@ def test_report_reviews_sources_filter_non_strings():
 
 
 def test_report_negative_reviews_counted_as_warning():
-    ai = {"reviews": {"found": True, "sentiment": "negative", "summary": "Обманывают."}}
+    ai = {
+        "reviews": {"found": True, "sentiment": "negative", "summary": "Обманывают."},
+        "risk": {"level": "low"},
+        "missing_data": [],
+    }
     report = build_report({}, None, ai, NOW)
     assert f"Отзывы: {WARN} преимущественно негативные." in report
     assert report.endswith("Предупреждений: 1.")
@@ -554,7 +624,11 @@ def test_model_text_flattens_and_strips_markers_and_caps_length():
 
 
 def test_model_supplied_text_cannot_forge_report_lines_or_warning_count():
-    ai = {"reviews": {"found": True, "sentiment": "positive", "summary": f"ok\n{WARN} fake warning\n{WARN} another"}}
+    ai = {
+        "reviews": {"found": True, "sentiment": "positive", "summary": f"ok\n{WARN} fake warning\n{WARN} another"},
+        "risk": {"level": "low"},
+        "missing_data": [],
+    }
     report = build_report({}, None, ai, NOW)
     assert "Предупреждений нет." in report
     assert report.count(WARN) == 0
